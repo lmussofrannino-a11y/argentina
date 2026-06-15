@@ -29,6 +29,8 @@ import {
   User,
   ChevronRight,
   Ticket,
+  Check,
+  Search,
 } from 'lucide-react';
 
 // ========================================
@@ -355,6 +357,10 @@ export default function MiArgentinaApp() {
         {view === 'documentos' && <DocumentosView />}
         {view === 'dni-viewer' && <DniViewerView />}
         {view === 'admin' && <AdminView />}
+        {view === 'novedades' && <NovedadesView />}
+        {view === 'telefonos' && <TelefonosView />}
+        {view === 'trabajo' && <TrabajoView />}
+        {view === 'vehiculos' && <VehiculosView />}
       </div>
     </div>
   );
@@ -777,6 +783,49 @@ function DniPreviewCard({ nombre, apellido, dniNumero, sexo, nacimiento, fechaEm
 }
 
 // ========================================
+// BOTTOM NAVIGATION BAR (shared component)
+// ========================================
+type BottomTab = 'home' | 'novedades' | 'telefonos' | 'usuario';
+
+function BottomNavBar({ activeTab }: { activeTab: BottomTab }) {
+  const { setView } = useAppStore();
+  const tabs: { key: BottomTab; label: string; icon: string; iconStyle: React.CSSProperties; action: () => void }[] = [
+    { key: 'home', label: 'Inicio', icon: '/icons/logo-CASA.png', iconStyle: { height: '24px', width: '24px' }, action: () => setView('home') },
+    { key: 'novedades', label: 'Novedades', icon: '/icons/logo-NOVEDADES.png', iconStyle: { height: '37px', width: '80px' }, action: () => setView('novedades') },
+    { key: 'telefonos', label: 'Teléfonos', icon: '/icons/logo-TELEFONO.png', iconStyle: { height: '37px', width: '50px' }, action: () => setView('telefonos') },
+    { key: 'usuario', label: 'Usuario', icon: '/icons/logo-USUARIO.png', iconStyle: { height: '24px', width: '24px' }, action: () => setView('home') },
+  ];
+
+  return (
+    <div style={{
+      position: 'fixed',
+      bottom: 0,
+      left: '50%',
+      transform: 'translateX(-50%)',
+      width: '100%',
+      maxWidth: '390px',
+      background: '#fff',
+      borderTop: '1px solid #e0e0e0',
+      display: 'flex',
+      padding: '6px 0 8px',
+      zIndex: 50,
+    }}>
+      {tabs.map((tab) => {
+        const isActive = activeTab === tab.key;
+        return (
+          <button key={tab.key} onClick={tab.action} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
+            <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <img src={tab.icon} alt={tab.label} style={{ ...tab.iconStyle, objectFit: 'contain' }} />
+            </div>
+            <span style={{ fontSize: '12px', color: isActive ? '#342BCB' : '#757575', fontWeight: isActive ? 600 : 400, fontFamily: SYS_FONT }}>{tab.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ========================================
 // HOME VIEW
 // ========================================
 function HomeView() {
@@ -812,33 +861,43 @@ function HomeView() {
   };
 
   const services = [
-    { icon: '/icons/serv-tramites.png', label: 'Documentos', action: () => setView('documentos'), iconMaxW: '94%', iconMaxH: '100%', textMT: '0px', textMB: '0px' },
-    { icon: '/icons/serv-vehiculos.png', label: 'Vehículos', action: () => {}, iconMaxW: '140%', iconMaxH: '114%', textMT: '-19px', textMB: '0px' },
-    { icon: '/icons/serv-trabajo.png', label: 'Trabajo', action: () => {}, iconMaxW: '94%', iconMaxH: '100%', textMT: '0px', textMB: '0px' },
-    { icon: '/icons/serv-salud.png', label: 'Salud', action: () => {}, iconMaxW: '118%', iconMaxH: '62%', textMT: '-7px', textMB: '0px' },
-    { icon: '/icons/serv-cobros.png', label: 'Cobros', action: () => {}, iconMaxW: '121%', iconMaxH: '129%', textMT: '-12px', textMB: '0px' },
-    { icon: '/icons/serv-documentos.png', label: 'Trámites', action: () => {}, iconMaxW: '117%', iconMaxH: '125%', textMT: '-7px', textMB: '0px' },
-    { icon: '/icons/serv-turnos.png', label: 'Turnos', action: () => {}, iconMaxW: '70%', iconMaxH: '124%', textMT: '-2px', textMB: '0px' },
-    { icon: '/icons/serv-hijos.png', label: 'Hijos', action: () => {}, iconMaxW: '94%', iconMaxH: '100%', textMT: '6px', textMB: '0px' },
+    { icon: '/icons/serv-tramites.png', label: 'Documentos', action: () => setView('documentos') },
+    { icon: '/icons/serv-vehiculos.png', label: 'Vehículos', action: () => setView('vehiculos') },
+    { icon: '/icons/serv-trabajo.png', label: 'Trabajo', action: () => setView('trabajo') },
+    { icon: '/icons/serv-salud.png', label: 'Salud', action: () => {} },
+    { icon: '/icons/serv-cobros.png', label: 'Cobros', action: () => {} },
+    { icon: '/icons/serv-documentos.png', label: 'Trámites', action: () => {} },
+    { icon: '/icons/serv-turnos.png', label: 'Turnos', action: () => {} },
+    { icon: '/icons/serv-hijos.png', label: 'Hijos', action: () => {} },
   ];
 
   return (
     <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh', paddingBottom: '70px' }}>
-      {/* Header */}
-      <header style={{ background: '#3730ba', padding: '50px 16px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <button onClick={logout} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}><Menu size={24} /></button>
-        <span onClick={handleLogoTap} style={{ color: '#fff', fontSize: '16px', fontWeight: 600, fontFamily: SYS_FONT, cursor: 'pointer', userSelect: 'none' }}><span style={{ fontStyle: 'italic', fontWeight: 400 }}>mi</span>Argentina</span>
-        <button onClick={logout} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <User size={22} />
-          <ChevronDown size={16} />
-        </button>
+      {/* Header - redesigned with rounded bottom */}
+      <header style={{ background: '#342BCB', position: 'relative', height: '26vh', minHeight: '200px', borderBottomLeftRadius: '40px', borderBottomRightRadius: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        {/* Top row: logo centered + avatar right */}
+        <div style={{ width: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '50px' }}>
+          <span onClick={handleLogoTap} style={{ color: '#fff', fontSize: '38px', fontWeight: 700, fontFamily: SYS_FONT, cursor: 'pointer', userSelect: 'none' }}>
+            <span style={{ color: '#7098DB' }}>mi</span>Argentina
+          </span>
+          {/* Avatar */}
+          <div style={{ position: 'absolute', right: '30px', top: '50px' }}>
+            <div style={{ width: '62px', height: '62px', borderRadius: '50%', background: '#d0d0d0', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+              <User size={30} color="#555" />
+              {/* Check overlay */}
+              <div style={{ position: 'absolute', bottom: '-2px', left: '-2px', width: '22px', height: '22px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>
+                <Check size={13} color="#7098DB" strokeWidth={3} />
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Greeting */}
+        <div style={{ marginTop: '20px', textAlign: 'center' }}>
+          <h1 style={{ fontSize: '30px', fontWeight: 400, color: '#fff', fontFamily: SYS_FONT, margin: 0 }}>¡Hola {nombre}!</h1>
+        </div>
+        {/* Scrollbar indicator on right edge */}
+        <div style={{ position: 'absolute', right: '2px', top: '50%', transform: 'translateY(-50%)', width: '4px', height: '80px', background: '#000', borderRadius: '4px' }} />
       </header>
-
-      {/* Greeting Section */}
-      <div style={{ padding: '14px 16px 0' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#212121', fontFamily: SYS_FONT, margin: '0 0 4px' }}>¡Hola {nombre}!</h1>
-        <p style={{ fontSize: '14px', color: '#757575', fontFamily: SYS_FONT, margin: 0, lineHeight: 1.4 }}>Gestioná trámites, sacá turnos, accedé a tus credenciales y recibí información personalizada.</p>
-      </div>
 
       {/* Pending activation notice */}
       {!isActive && (
@@ -868,9 +927,11 @@ function HomeView() {
         <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#212121', fontFamily: SYS_FONT, margin: '0 0 6px' }}>¿Qué necesitás hoy?</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
           {services.map((s, i) => (
-            <button key={i} onClick={s.action} style={{ background: '#fff', border: 'none', borderRadius: '10px', aspectRatio: '1 / 1.15', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', transition: 'transform 0.2s', fontFamily: SYS_FONT }}>
-              <img src={s.icon} alt={s.label} style={{ maxWidth: s.iconMaxW, maxHeight: s.iconMaxH, objectFit: 'contain' }} />
-              <span style={{ fontSize: '11px', color: '#212121', fontWeight: 400, fontFamily: SYS_FONT, textAlign: 'center', lineHeight: 1.2, marginTop: s.textMT, marginBottom: s.textMB }}>{s.label}</span>
+            <button key={i} onClick={s.action} style={{ background: '#fff', border: 'none', borderRadius: '10px', aspectRatio: '1 / 1.15', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', transition: 'transform 0.2s', fontFamily: SYS_FONT }}>
+              <div style={{ height: '42px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <img src={s.icon} alt={s.label} style={{ maxWidth: '60%', maxHeight: '42px', objectFit: 'contain' }} />
+              </div>
+              <span style={{ fontSize: '11px', color: '#212121', fontWeight: 700, fontFamily: SYS_FONT, textAlign: 'center', lineHeight: 1.2, marginTop: '4px' }}>{s.label}</span>
             </button>
           ))}
         </div>
@@ -888,54 +949,12 @@ function HomeView() {
         </div>
       </div>
 
-      {/* Mantené tu perfil actualizado Card */}
-      <div style={{ background: '#fce4ec', margin: '8px 12px 0', borderRadius: '10px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#e91e63', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <User size={18} color="#fff" />
-        </div>
-        <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#212121', fontFamily: SYS_FONT, textDecoration: 'underline', flex: 1 }}>Mantené tu perfil actualizado</p>
-        <ChevronRight size={20} color="#757575" />
+      {/* Mantené tu perfil actualizado - Image */}
+      <div style={{ margin: '8px 12px 0' }}>
+        <img src="/perfil.png" alt="Mantené tu perfil actualizado" style={{ width: '100%', borderRadius: '10px', display: 'block' }} />
       </div>
 
-      {/* Bottom Navigation Bar */}
-      <div style={{
-        position: 'fixed',
-        bottom: 0,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: '100%',
-        maxWidth: '390px',
-        background: '#fff',
-        borderTop: '1px solid #e0e0e0',
-        display: 'flex',
-        padding: '6px 0 8px',
-        zIndex: 50,
-      }}>
-        <button style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
-          <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/icons/logo-CASA.png" alt="Inicio" style={{ height: '24px', width: '24px', objectFit: 'contain' }} />
-          </div>
-          <span style={{ fontSize: '12px', color: '#3730ba', fontWeight: 600, fontFamily: SYS_FONT }}>Inicio</span>
-        </button>
-        <button style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
-          <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/icons/logo-NOVEDADES.png" alt="Novedades" style={{ height: '37px', width: '80px', objectFit: 'contain' }} />
-          </div>
-          <span style={{ fontSize: '12px', color: '#757575', fontFamily: SYS_FONT }}>Novedades</span>
-        </button>
-        <button style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
-          <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/icons/logo-TELEFONO.png" alt="Teléfonos" style={{ height: '37px', width: '50px', objectFit: 'contain' }} />
-          </div>
-          <span style={{ fontSize: '12px', color: '#757575', fontFamily: SYS_FONT }}>Teléfonos</span>
-        </button>
-        <button style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
-          <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/icons/logo-USUARIO.png" alt="Usuario" style={{ height: '24px', width: '24px', objectFit: 'contain' }} />
-          </div>
-          <span style={{ fontSize: '12px', color: '#757575', fontFamily: SYS_FONT }}>Usuario</span>
-        </button>
-      </div>
+      <BottomNavBar activeTab="home" />
 
       {/* Admin Password Modal */}
       {showAdminPrompt && (
@@ -1024,45 +1043,7 @@ function DocumentosView() {
 
       </div>
 
-      {/* Bottom Navigation Bar */}
-      <div style={{
-        position: 'fixed',
-        bottom: 0,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: '100%',
-        maxWidth: '390px',
-        background: '#fff',
-        borderTop: '1px solid #e0e0e0',
-        display: 'flex',
-        padding: '6px 0 8px',
-        zIndex: 50,
-      }}>
-        <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
-          <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/icons/logo-CASA.png" alt="Inicio" style={{ height: '24px', width: '24px', objectFit: 'contain' }} />
-          </div>
-          <span style={{ fontSize: '12px', color: '#757575', fontFamily: SYS_FONT }}>Inicio</span>
-        </button>
-        <button style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
-          <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/icons/logo-NOVEDADES.png" alt="Novedades" style={{ height: '37px', width: '80px', objectFit: 'contain' }} />
-          </div>
-          <span style={{ fontSize: '12px', color: '#757575', fontFamily: SYS_FONT }}>Novedades</span>
-        </button>
-        <button style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
-          <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/icons/logo-TELEFONO.png" alt="Teléfonos" style={{ height: '37px', width: '50px', objectFit: 'contain' }} />
-          </div>
-          <span style={{ fontSize: '12px', color: '#757575', fontFamily: SYS_FONT }}>Teléfonos</span>
-        </button>
-        <button style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
-          <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/icons/logo-USUARIO.png" alt="Usuario" style={{ height: '24px', width: '24px', objectFit: 'contain' }} />
-          </div>
-          <span style={{ fontSize: '12px', color: '#757575', fontFamily: SYS_FONT }}>Usuario</span>
-        </button>
-      </div>
+      <BottomNavBar activeTab="home" />
     </div>
   );
 }
@@ -1597,6 +1578,215 @@ function AdminView() {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+// ========================================
+// SHARED BLUE HEADER (rounded bottom, used in home/novedades/telefonos)
+// ========================================
+function BlueRoundedHeader({ nombre, onLogoTap }: { nombre: string; onLogoTap?: () => void }) {
+  return (
+    <header style={{ background: '#342BCB', position: 'relative', height: '26vh', minHeight: '200px', borderBottomLeftRadius: '40px', borderBottomRightRadius: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      {/* Top row: logo centered + avatar right */}
+      <div style={{ width: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '50px' }}>
+        <span onClick={onLogoTap} style={{ color: '#fff', fontSize: '38px', fontWeight: 700, fontFamily: SYS_FONT, cursor: onLogoTap ? 'pointer' : 'default', userSelect: 'none' }}>
+          <span style={{ color: '#7098DB' }}>mi</span>Argentina
+        </span>
+        {/* Avatar */}
+        <div style={{ position: 'absolute', right: '30px', top: '50px' }}>
+          <div style={{ width: '62px', height: '62px', borderRadius: '50%', background: '#d0d0d0', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+            <User size={30} color="#555" />
+            {/* Check overlay */}
+            <div style={{ position: 'absolute', bottom: '-2px', left: '-2px', width: '22px', height: '22px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>
+              <Check size={13} color="#7098DB" strokeWidth={3} />
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* Greeting */}
+      <div style={{ marginTop: '20px', textAlign: 'center' }}>
+        <h1 style={{ fontSize: '30px', fontWeight: 400, color: '#fff', fontFamily: SYS_FONT, margin: 0 }}>¡Hola {nombre}!</h1>
+      </div>
+      {/* Scrollbar indicator on right edge */}
+      <div style={{ position: 'absolute', right: '2px', top: '50%', transform: 'translateY(-50%)', width: '4px', height: '80px', background: '#000', borderRadius: '4px' }} />
+    </header>
+  );
+}
+
+// ========================================
+// NOVEDADES VIEW
+// ========================================
+function NovedadesView() {
+  const { user, setView } = useAppStore();
+  const nombre = user?.dni?.nombre || 'Usuario';
+
+  return (
+    <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh', paddingBottom: '70px' }}>
+      <BlueRoundedHeader nombre={nombre} />
+
+      {/* Content */}
+      <div style={{ padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ background: '#fff', borderRadius: '16px', padding: '40px 24px', maxWidth: '340px', width: '100%', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', textAlign: 'center' }}>
+          {/* Document/News icon */}
+          <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+            <FileText size={40} color="#999" />
+          </div>
+          <p style={{ margin: 0, fontSize: '16px', color: '#757575', fontFamily: SYS_FONT, lineHeight: 1.5 }}>
+            No hay novedades para mostrar en este momento
+          </p>
+          <button
+            onClick={() => setView('home')}
+            style={{ marginTop: '24px', background: '#7B1FA2', color: '#fff', border: 'none', borderRadius: '25px', padding: '14px 32px', fontSize: '16px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT, width: '100%' }}
+          >
+            Volver al inicio
+          </button>
+        </div>
+      </div>
+
+      <BottomNavBar activeTab="novedades" />
+    </div>
+  );
+}
+
+// ========================================
+// TELÉFONOS VIEW
+// ========================================
+function TelefonosView() {
+  const { user } = useAppStore();
+  const nombre = user?.dni?.nombre || 'Usuario';
+
+  const emergencyPhones = [
+    { number: '911', label: 'Central de emergencias nacionales' },
+    { number: '144', label: 'Víctimas de violencia' },
+    { number: '107', label: 'Emergencias Médicas' },
+    { number: '100', label: 'Bomberos' },
+    { number: '102', label: 'La línea de las chicas y los chicos' },
+    { number: '103', label: 'Defensa Civil' },
+    { number: '106', label: 'Emergencia Náutica' },
+    { number: '135', label: 'Asistencia al Suicida' },
+  ];
+
+  return (
+    <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh', paddingBottom: '70px' }}>
+      <BlueRoundedHeader nombre={nombre} />
+
+      {/* Phone list */}
+      <div style={{ padding: '16px 12px 0' }}>
+        {emergencyPhones.map((phone, i) => (
+          <div key={i} style={{ background: '#fff', borderRadius: '12px', padding: '16px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Phone size={20} color="#342BCB" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <span style={{ fontSize: '22px', fontWeight: 700, color: '#342BCB', fontFamily: SYS_FONT, marginRight: '12px' }}>{phone.number}</span>
+              <span style={{ fontSize: '14px', color: '#616161', fontFamily: SYS_FONT, lineHeight: 1.3 }}>{phone.label}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <BottomNavBar activeTab="telefonos" />
+    </div>
+  );
+}
+
+// ========================================
+// TRABAJO VIEW
+// ========================================
+function TrabajoView() {
+  const { user, setView } = useAppStore();
+  const nombre = user?.dni?.nombre || '';
+  const apellido = user?.dni?.apellido || '';
+  const dniNumero = user?.dni?.dniNumero || '';
+
+  // Generate a placeholder CUIL based on DNI (20 + DNI + check digit)
+  const cuil = dniNumero ? `20${dniNumero.replace(/\D/g, '')}5` : '00000000000';
+
+  return (
+    <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh', paddingBottom: '70px' }}>
+      {/* Header with back arrow */}
+      <header style={{ background: '#342BCB', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '55px 16px 16px', position: 'sticky', top: 0, zIndex: 50 }}>
+        <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', position: 'absolute', left: '16px', top: '55px' }}><ArrowLeft size={24} /></button>
+        <span style={{ color: '#fff', fontSize: '17px', fontWeight: 600, fontFamily: SYS_FONT }}>Trabajo</span>
+      </header>
+
+      <div style={{ padding: '16px 12px' }}>
+        <div style={{ background: '#fff', borderRadius: '12px', padding: '24px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+          {/* Nombre */}
+          <div style={{ marginBottom: '20px' }}>
+            <p style={{ margin: 0, fontSize: '12px', color: '#9e9e9e', fontFamily: SYS_FONT, marginBottom: '4px' }}>Nombre</p>
+            <p style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#333', fontFamily: SYS_FONT }}>{nombre.toUpperCase()}</p>
+          </div>
+          {/* Apellido */}
+          <div style={{ marginBottom: '20px' }}>
+            <p style={{ margin: 0, fontSize: '12px', color: '#9e9e9e', fontFamily: SYS_FONT, marginBottom: '4px' }}>Apellido</p>
+            <p style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#333', fontFamily: SYS_FONT }}>{apellido.toUpperCase()}</p>
+          </div>
+          {/* CUIL */}
+          <div style={{ marginBottom: '24px' }}>
+            <p style={{ margin: 0, fontSize: '12px', color: '#9e9e9e', fontFamily: SYS_FONT, marginBottom: '4px' }}>Número de CUIL</p>
+            <p style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#333', fontFamily: SYS_FONT }}>{cuil}</p>
+          </div>
+          {/* Download button */}
+          <button
+            style={{ width: '100%', background: '#342BCB', color: '#fff', border: 'none', borderRadius: '25px', padding: '14px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT, marginBottom: '16px' }}
+          >
+            Descargar constancia de CUIL
+          </button>
+          {/* Data source */}
+          <p style={{ margin: 0, fontSize: '12px', color: '#9e9e9e', fontFamily: SYS_FONT, textAlign: 'center' }}>
+            Datos suministrados por <span style={{ color: '#342BCB', fontWeight: 600 }}>ANSES</span>
+          </p>
+        </div>
+      </div>
+
+      <BottomNavBar activeTab="home" />
+    </div>
+  );
+}
+
+// ========================================
+// VEHÍCULOS VIEW
+// ========================================
+function VehiculosView() {
+  const { setView } = useAppStore();
+
+  return (
+    <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh', paddingBottom: '70px' }}>
+      {/* Header with back arrow */}
+      <header style={{ background: '#342BCB', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '55px 16px 16px', position: 'sticky', top: 0, zIndex: 50 }}>
+        <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', position: 'absolute', left: '16px', top: '55px' }}><ArrowLeft size={24} /></button>
+        <span style={{ color: '#fff', fontSize: '17px', fontWeight: 600, fontFamily: SYS_FONT }}>Vehículos</span>
+      </header>
+
+      <div style={{ padding: '16px 12px' }}>
+        {/* Blue info card */}
+        <div style={{ background: '#e3f2fd', borderRadius: '12px', padding: '16px', marginBottom: '12px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#342BCB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Car size={20} color="#fff" />
+          </div>
+          <p style={{ margin: 0, fontSize: '13px', color: '#333', fontFamily: SYS_FONT, lineHeight: 1.5 }}>
+            Si viajas al exterior y no contás con cédula física y/o patente, comunicate con la DNRPA para asesorarte.
+          </p>
+        </div>
+
+        {/* White card - Agregá servicios */}
+        <div style={{ background: '#fff', borderRadius: '12px', padding: '24px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+          <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 700, color: '#212121', fontFamily: SYS_FONT }}>Agregá servicios</h3>
+          <p style={{ margin: '0 0 20px', fontSize: '14px', color: '#757575', fontFamily: SYS_FONT, lineHeight: 1.5 }}>
+            Asociá servicios para ver tu licencia de conducir y las cédulas de vehículos asociados a tu DNI.
+          </p>
+          <button
+            onClick={() => setView('home')}
+            style={{ width: '100%', background: '#342BCB', color: '#fff', border: 'none', borderRadius: '25px', padding: '14px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT }}
+          >
+            Agregar servicios
+          </button>
+        </div>
+      </div>
+
+      <BottomNavBar activeTab="home" />
     </div>
   );
 }
