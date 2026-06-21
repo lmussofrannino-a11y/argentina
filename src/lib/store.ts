@@ -24,7 +24,7 @@ export interface UserData {
   dni: DniData | null;
 }
 
-export type AppView = 'login' | 'register' | 'home' | 'documentos' | 'dni-viewer' | 'admin';
+export type AppView = 'login' | 'register' | 'home' | 'documentos' | 'dni-viewer' | 'admin' | 'novedades' | 'telefonos' | 'trabajo' | 'vehiculos' | 'salud' | 'cobros' | 'hijos' | 'tramites';
 
 interface AppState {
   view: AppView;
@@ -39,6 +39,9 @@ interface AppState {
   setError: (error: string | null) => void;
   logout: () => void;
   setHasHydrated: (v: boolean) => void;
+  updateDni: (dni: Partial<DniData>) => void;
+  menuOpen: boolean;
+  setMenuOpen: (open: boolean) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -56,6 +59,14 @@ export const useAppStore = create<AppState>()(
       setError: (error) => set({ error, isLoading: false }),
       logout: () => set({ view: 'login', user: null, error: null }),
       setHasHydrated: (_hasHydrated) => set({ _hasHydrated }),
+      updateDni: (dniData) => set((state) => ({
+        user: state.user ? {
+          ...state.user,
+          dni: state.user.dni ? { ...state.user.dni, ...dniData } : dniData as DniData,
+        } : null,
+      })),
+      menuOpen: false,
+      setMenuOpen: (menuOpen) => set({ menuOpen }),
     }),
     {
       name: 'mi-argentina-session', // localStorage key

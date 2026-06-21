@@ -26,10 +26,8 @@ import {
   ShieldOff,
   Bell,
   MoreHorizontal,
-  User,
   ChevronRight,
   Ticket,
-  Check,
   Search,
 } from 'lucide-react';
 
@@ -350,7 +348,7 @@ export default function MiArgentinaApp() {
 
   return (
     <div className="min-h-screen w-full flex justify-center bg-white">
-      <div className="w-full" style={{ maxWidth: '390px', overflow: 'hidden', minHeight: '100vh' }}>
+      <div className="w-full" style={{ maxWidth: '390px', overflow: 'hidden', minHeight: '100vh', position: 'relative' }}>
         {view === 'login' && <LoginView />}
         {view === 'register' && <RegisterView />}
         {view === 'home' && <HomeView />}
@@ -359,9 +357,119 @@ export default function MiArgentinaApp() {
         {view === 'admin' && <AdminView />}
         {view === 'novedades' && <NovedadesView />}
         {view === 'telefonos' && <TelefonosView />}
+        {view === 'salud' && <SaludView />}
+        {view === 'cobros' && <CobrosView />}
+        {view === 'hijos' && <HijosView />}
+        {view === 'tramites' && <TramitesView />}
         {view === 'trabajo' && <TrabajoView />}
         {view === 'vehiculos' && <VehiculosView />}
+        <EditMenu />
       </div>
+    </div>
+  );
+}
+
+function EditMenu() {
+  const { menuOpen, setMenuOpen, user, updateDni } = useAppStore();
+  const dni = user?.dni;
+
+  const [nombre, setNombre] = useState(dni?.nombre || '');
+  const [apellido, setApellido] = useState(dni?.apellido || '');
+  const [dniNumero, setDniNumero] = useState(dni?.dniNumero || '');
+  const [domicilio, setDomicilio] = useState(dni?.domicilio || '');
+  const [nacimiento, setNacimiento] = useState(dni?.nacimiento || '');
+  const [fechaEmision, setFechaEmision] = useState(dni?.fechaEmision || '');
+  const [sexo, setSexo] = useState(dni?.sexo || '');
+  const [tramiteNumero, setTramiteNumero] = useState(dni?.tramiteNumero || '');
+  const [ejemplar, setEjemplar] = useState(dni?.ejemplar || '');
+  const [foto, setFoto] = useState<string | null>(dni?.foto || null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (dni) {
+      setNombre(dni.nombre || '');
+      setApellido(dni.apellido || '');
+      setDniNumero(dni.dniNumero || '');
+      setDomicilio(dni.domicilio || '');
+      setNacimiento(dni.nacimiento || '');
+      setFechaEmision(dni.fechaEmision || '');
+      setSexo(dni.sexo || '');
+      setTramiteNumero(dni.tramiteNumero || '');
+      setEjemplar(dni.ejemplar || '');
+      setFoto(dni.foto || null);
+    }
+  }, [dni]);
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => setFoto(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleSave = () => {
+    updateDni({
+      nombre, apellido, dniNumero, domicilio, nacimiento,
+      fechaEmision, sexo, tramiteNumero, ejemplar, foto,
+    });
+    setMenuOpen(false);
+  };
+
+  if (!menuOpen) return null;
+
+  return (
+    <>
+      <div onClick={() => setMenuOpen(false)} style={{
+        position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 999,
+      }} />
+      <div style={{
+        position: 'absolute', top: 0, left: 0, bottom: 0, width: '300px', background: '#fff',
+        zIndex: 1000, boxShadow: '2px 0 16px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column',
+      }}>
+        <div style={{ background: '#362FC1', color: '#fff', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h2 style={{ margin: 0, fontSize: '18px', fontFamily: SYS_FONT, fontWeight: 600 }}>Editar Datos</h2>
+          <button onClick={() => setMenuOpen(false)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '22px' }}>✕</button>
+        </div>
+        <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+            <input type="file" ref={fileInputRef} accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
+            <button type="button" onClick={() => fileInputRef.current?.click()} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', margin: '0 auto' }}>
+              <div style={{ width: '70px', height: '70px', borderRadius: '50%', border: '3px solid #362FC1', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', boxShadow: '0 4px 8px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+                {foto ? <img src={foto} alt="Foto" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Camera size={28} color="#362FC1" />}
+              </div>
+              <span style={{ color: '#362FC1', fontSize: '14px', fontWeight: 500, fontFamily: SYS_FONT }}>Seleccionar foto</span>
+            </button>
+          </div>
+          <EditField label="Nombre" value={nombre} onChange={setNombre} />
+          <EditField label="Apellido" value={apellido} onChange={setApellido} />
+          <EditField label="DNI" value={dniNumero} onChange={setDniNumero} />
+          <EditField label="Domicilio" value={domicilio} onChange={setDomicilio} />
+          <EditField label="Fecha de Nacimiento" value={nacimiento} onChange={setNacimiento} />
+          <EditField label="Fecha de Emisión" value={fechaEmision} onChange={setFechaEmision} />
+          <EditField label="Sexo" value={sexo} onChange={setSexo} />
+          <EditField label="Trámite N°" value={tramiteNumero} onChange={setTramiteNumero} />
+          <EditField label="Ejemplar" value={ejemplar} onChange={setEjemplar} />
+        </div>
+        <div style={{ padding: '16px', borderTop: '1px solid #eee' }}>
+          <button onClick={handleSave} style={{
+            width: '100%', padding: '10px', background: '#3333cc', color: '#fff', border: 'none',
+            borderRadius: '25px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT,
+          }}>Guardar</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function EditField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div style={{ marginBottom: '12px' }}>
+      <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px', fontFamily: SYS_FONT }}>{label}</label>
+      <input value={value} onChange={(e) => onChange(e.target.value)} style={{
+        width: '100%', padding: '8px 10px', border: '1px solid #ccc', borderRadius: '6px',
+        fontSize: '14px', fontFamily: SYS_FONT, boxSizing: 'border-box',
+      }} />
     </div>
   );
 }
@@ -407,20 +515,20 @@ function LoginView() {
           <div style={{ alignItems: 'center', display: 'flex', justifyContent: 'center', width: '100%' }}>
             <button type="submit" disabled={!isFormValid || isLoading}
               onMouseEnter={() => setIsButtonHovered(true)} onMouseLeave={() => setIsButtonHovered(false)}
-              style={{ fontFamily: 'Arial, sans-serif', background: !isFormValid || isLoading ? '#3730ba80' : isButtonHovered ? '#2a24a0' : '#3730ba', border: 'none', borderRadius: '12px', boxShadow: isButtonHovered && isFormValid ? '0 8px 15px -3px #0000004d' : '0 6px 15px -5px #0000004d', color: '#fff', cursor: isFormValid && !isLoading ? 'pointer' : 'not-allowed', fontSize: '14px', fontWeight: 600, letterSpacing: '0.5px', padding: '12px 25px', textAlign: 'center', textTransform: 'uppercase', transition: 'all 0.3s ease', transform: isButtonHovered && isFormValid ? 'translateY(-2px)' : 'none', width: '80%' }}>
+              style={{ fontFamily: 'Arial, sans-serif', background: !isFormValid || isLoading ? '#362FC180' : isButtonHovered ? '#2a24a0' : '#362FC1', border: 'none', borderRadius: '12px', boxShadow: isButtonHovered && isFormValid ? '0 8px 15px -3px #0000004d' : '0 6px 15px -5px #0000004d', color: '#fff', cursor: isFormValid && !isLoading ? 'pointer' : 'not-allowed', fontSize: '14px', fontWeight: 600, letterSpacing: '0.5px', padding: '12px 25px', textAlign: 'center', textTransform: 'uppercase', transition: 'all 0.3s ease', transform: isButtonHovered && isFormValid ? 'translateY(-2px)' : 'none', width: '80%' }}>
               {isLoading ? 'Entrando...' : 'Entrar'}
             </button>
           </div>
         </form>
         {error && <p style={{ color: 'red', textAlign: 'center', fontSize: '14px', margin: '10px 40px 0' }}>{error}</p>}
         <p style={{ color: '#262626', fontSize: '14px', margin: '15px', textAlign: 'center', fontFamily: SYS_FONT }}>
-          <a href="#" style={{ color: '#3730ba', textDecoration: 'none' }} onClick={(e) => e.preventDefault()}>¿Olvidaste tu contraseña?</a>
+          <a href="#" style={{ color: '#362FC1', textDecoration: 'none' }} onClick={(e) => e.preventDefault()}>¿Olvidaste tu contraseña?</a>
         </p>
       </div>
       <div style={{ alignItems: 'center', background: '#fff', border: '1px solid #dbdbdb', borderRadius: '1px', display: 'flex', justifyContent: 'center', padding: '10px 0', width: '100%' }}>
         <p style={{ color: '#262626', fontSize: '14px', margin: '15px', fontFamily: SYS_FONT }}>
           ¿No tienes cuenta?{' '}
-          <a href="#" style={{ color: '#3730ba', textDecoration: 'none', fontWeight: 600 }} onClick={(e) => { e.preventDefault(); setView('register'); }}>Registrarse</a>
+          <a href="#" style={{ color: '#362FC1', textDecoration: 'none', fontWeight: 600 }} onClick={(e) => { e.preventDefault(); setView('register'); }}>Registrarse</a>
         </p>
       </div>
     </div>
@@ -541,8 +649,8 @@ function RegisterView() {
   };
 
   return (
-    <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
-      <header style={{ background: '#3730ba', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '55px 16px 16px', position: 'sticky', top: 0, zIndex: 50 }}>
+    <div style={{ backgroundColor: '#f0f0f0', minHeight: '100vh' }}>
+      <header style={{ background: '#362FC1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '55px 16px 16px', position: 'sticky', top: 0, zIndex: 50 }}>
         <button onClick={() => setView('login')} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: 0 }}><ArrowLeft size={24} /></button>
         <span style={{ color: '#fff', fontSize: '17px', fontWeight: 600, fontFamily: SYS_FONT }}>Registro</span>
         <div style={{ width: 24 }} />
@@ -573,22 +681,22 @@ function RegisterView() {
             <label style={{ color: '#8e8e8e', fontSize: '14px', display: 'block', marginBottom: '4px', fontFamily: SYS_FONT }}>Sexo</label>
             <div style={{ display: 'flex', gap: '20px', padding: '8px 0' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontFamily: SYS_FONT, fontSize: '14px', color: '#333' }}>
-                <input type="radio" name="sexo" value="M" checked={sexo === 'M'} onChange={() => setSexo('M')} style={{ accentColor: '#3730ba' }} /> Masculino
+                <input type="radio" name="sexo" value="M" checked={sexo === 'M'} onChange={() => setSexo('M')} style={{ accentColor: '#362FC1' }} /> Masculino
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontFamily: SYS_FONT, fontSize: '14px', color: '#333' }}>
-                <input type="radio" name="sexo" value="F" checked={sexo === 'F'} onChange={() => setSexo('F')} style={{ accentColor: '#3730ba' }} /> Femenino
+                <input type="radio" name="sexo" value="F" checked={sexo === 'F'} onChange={() => setSexo('F')} style={{ accentColor: '#362FC1' }} /> Femenino
               </label>
             </div>
           </div>
 
           <div>
-            <label style={{ color: '#3730ba', fontSize: '14px', fontWeight: 500, display: 'block', marginBottom: '6px', fontFamily: SYS_FONT }}>Firma</label>
+            <label style={{ color: '#362FC1', fontSize: '14px', fontWeight: 500, display: 'block', marginBottom: '6px', fontFamily: SYS_FONT }}>Firma</label>
             <div style={{ background: '#fff', borderRadius: '8px', border: '1px solid #dbdbdb', padding: '8px' }}>
               <canvas ref={sigCanvasRef} width={480} height={120}
                 onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing}
                 onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing}
                 style={{ width: '100%', height: '120px', border: '1px solid #000', borderRadius: '4px', cursor: 'crosshair', touchAction: 'none' }} />
-              <button type="button" onClick={clearSignature} style={{ marginTop: '8px', background: '#fff', border: '1px solid #3730ba', borderRadius: '8px', color: '#3730ba', padding: '6px 16px', fontSize: '13px', cursor: 'pointer', fontFamily: SYS_FONT, display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <button type="button" onClick={clearSignature} style={{ marginTop: '8px', background: '#fff', border: '1px solid #362FC1', borderRadius: '8px', color: '#362FC1', padding: '6px 16px', fontSize: '13px', cursor: 'pointer', fontFamily: SYS_FONT, display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <RotateCcw size={14} /> Limpiar
               </button>
             </div>
@@ -597,10 +705,10 @@ function RegisterView() {
           <div style={{ textAlign: 'center' }}>
             <input type="file" ref={fileInputRef} accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
             <button type="button" onClick={() => fileInputRef.current?.click()} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', margin: '0 auto' }}>
-              <div style={{ width: '70px', height: '70px', borderRadius: '50%', border: '3px solid #3730ba', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', boxShadow: '0 4px 8px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-                {foto ? <img src={foto} alt="Foto" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Camera size={28} color="#3730ba" />}
+              <div style={{ width: '70px', height: '70px', borderRadius: '50%', border: '3px solid #362FC1', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', boxShadow: '0 4px 8px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+                {foto ? <img src={foto} alt="Foto" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Camera size={28} color="#362FC1" />}
               </div>
-              <span style={{ color: '#3730ba', fontSize: '14px', fontWeight: 500, fontFamily: SYS_FONT }}>Seleccionar foto</span>
+              <span style={{ color: '#362FC1', fontSize: '14px', fontWeight: 500, fontFamily: SYS_FONT }}>Seleccionar foto</span>
             </button>
           </div>
 
@@ -612,7 +720,7 @@ function RegisterView() {
 
           {error && <p style={{ color: 'red', fontSize: '14px', textAlign: 'center', fontFamily: SYS_FONT }}>{error}</p>}
 
-          <button type="submit" disabled={isLoading} style={{ background: isLoading ? '#3730ba80' : '#3730ba', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '14px', fontWeight: 600, letterSpacing: '0.5px', padding: '14px 30px', cursor: isLoading ? 'not-allowed' : 'pointer', textTransform: 'uppercase', transition: 'all 0.3s ease', boxShadow: '0 6px 15px -5px rgba(0,0,0,0.3)', width: '100%', fontFamily: 'Arial, sans-serif' }}>
+          <button type="submit" disabled={isLoading} style={{ background: isLoading ? '#362FC180' : '#362FC1', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '14px', fontWeight: 600, letterSpacing: '0.5px', padding: '14px 30px', cursor: isLoading ? 'not-allowed' : 'pointer', textTransform: 'uppercase', transition: 'all 0.3s ease', boxShadow: '0 6px 15px -5px rgba(0,0,0,0.3)', width: '100%', fontFamily: 'Arial, sans-serif' }}>
             {isLoading ? 'Registrando...' : 'Registrarse'}
           </button>
           <div style={{ height: 40 }} />
@@ -785,15 +893,53 @@ function DniPreviewCard({ nombre, apellido, dniNumero, sexo, nacimiento, fechaEm
 // ========================================
 // BOTTOM NAVIGATION BAR (shared component)
 // ========================================
+function StatusBar() {
+  return (
+    <div style={{
+      height: '44px',
+      width: '100%',
+      background: '#362FC1',
+    }} />
+  );
+}
+
+function HeaderBar({ onLogoTap, onMenuClick }: { onLogoTap?: () => void; onMenuClick?: () => void }) {
+  return (
+    <div style={{
+      background: '#362FC1',
+      height: '60px',
+      width: '100%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '0 16px',
+      position: 'relative',
+      userSelect: 'none',
+    }}>
+      <button onClick={onMenuClick} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}>
+        <Menu size={26} color="#fff" />
+      </button>
+
+      <span onClick={onLogoTap} style={{ color: '#fff', fontSize: '26px', fontWeight: 700, fontFamily: SYS_FONT, cursor: onLogoTap ? 'pointer' : 'default', userSelect: 'none', position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
+        <span style={{ color: '#7098DB' }}>mi</span>Argentina
+      </span>
+
+      <div style={{ width: '38px', height: '38px', borderRadius: '50%', overflow: 'hidden' }}>
+        <img src="/icons/profile-user.png" alt="Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      </div>
+    </div>
+  );
+}
+
 type BottomTab = 'home' | 'novedades' | 'telefonos' | 'usuario';
 
 function BottomNavBar({ activeTab }: { activeTab: BottomTab }) {
   const { setView } = useAppStore();
-  const tabs: { key: BottomTab; label: string; icon: string; iconStyle: React.CSSProperties; action: () => void }[] = [
-    { key: 'home', label: 'Inicio', icon: '/icons/logo-CASA.png', iconStyle: { height: '24px', width: '24px' }, action: () => setView('home') },
-    { key: 'novedades', label: 'Novedades', icon: '/icons/logo-NOVEDADES.png', iconStyle: { height: '37px', width: '80px' }, action: () => setView('novedades') },
-    { key: 'telefonos', label: 'Teléfonos', icon: '/icons/logo-TELEFONO.png', iconStyle: { height: '37px', width: '50px' }, action: () => setView('telefonos') },
-    { key: 'usuario', label: 'Usuario', icon: '/icons/logo-USUARIO.png', iconStyle: { height: '24px', width: '24px' }, action: () => setView('home') },
+  const tabs: { key: BottomTab; label: string; icon: string; iconStyle: React.CSSProperties; action: () => void; activeIcon?: string }[] = [
+    { key: 'home', label: 'Inicio', icon: '/icons/logo-CASA.png', iconStyle: { height: '30px', width: '26px' }, action: () => setView('home') },
+    { key: 'novedades', label: 'Novedades', icon: '/icons/novedadesGRIS.png', activeIcon: '/icons/novedadesVIOLETA.png', iconStyle: { height: '37px', width: '80px', marginLeft: '3px' }, action: () => setView('novedades') },
+    { key: 'telefonos', label: 'Teléfonos', icon: '/icons/logo-TELEFONO.png', iconStyle: { height: '37px', width: '50px', marginLeft: '-3px' }, action: () => setView('telefonos') },
+    { key: 'usuario', label: 'Tina', icon: '/icons/logo-USUARIO.png', activeIcon: '/icons/logo-USUARIO.png', iconStyle: { height: '30px', width: '24px' }, action: () => setView('home') },
   ];
 
   return (
@@ -807,20 +953,23 @@ function BottomNavBar({ activeTab }: { activeTab: BottomTab }) {
       background: '#fff',
       borderTop: '1px solid #e0e0e0',
       display: 'flex',
-      padding: '6px 0 8px',
+      flexDirection: 'column',
+      padding: '6px 0 0px',
       zIndex: 50,
     }}>
-      {tabs.map((tab) => {
-        const isActive = activeTab === tab.key;
-        return (
-          <button key={tab.key} onClick={tab.action} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
-            <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <img src={tab.icon} alt={tab.label} style={{ ...tab.iconStyle, objectFit: 'contain' }} />
-            </div>
-            <span style={{ fontSize: '12px', color: isActive ? '#342BCB' : '#757575', fontWeight: isActive ? 600 : 400, fontFamily: SYS_FONT }}>{tab.label}</span>
-          </button>
-        );
-      })}
+      <div style={{ display: 'flex', width: '100%', paddingBottom: '4px' }}>
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.key;
+          return (
+            <button key={tab.key} onClick={tab.action} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
+              <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <img src={isActive && tab.activeIcon ? tab.activeIcon : tab.icon} alt={tab.label} style={{ ...tab.iconStyle, objectFit: 'contain', filter: tab.activeIcon ? 'none' : (isActive ? 'brightness(0) saturate(100%) invert(22%) sepia(95%) saturate(3000%) hue-rotate(240deg)' : 'brightness(0) saturate(0%) invert(46%)') }} />
+              </div>
+              <span style={{ fontSize: '12px', color: isActive ? '#362FC1' : '#757575', fontWeight: isActive ? 600 : 400, fontFamily: SYS_FONT }}>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -837,6 +986,13 @@ function HomeView() {
   const [showAdminPrompt, setShowAdminPrompt] = useState(false);
   const [adminPass, setAdminPass] = useState('');
   const [adminError, setAdminError] = useState('');
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const handleLogoTap = () => {
     tapCountRef.current += 1;
@@ -861,43 +1017,25 @@ function HomeView() {
   };
 
   const services = [
-    { icon: '/icons/serv-tramites.png', label: 'Documentos', action: () => setView('documentos') },
-    { icon: '/icons/serv-vehiculos.png', label: 'Vehículos', action: () => setView('vehiculos') },
-    { icon: '/icons/serv-trabajo.png', label: 'Trabajo', action: () => setView('trabajo') },
-    { icon: '/icons/serv-salud.png', label: 'Salud', action: () => {} },
-    { icon: '/icons/serv-cobros.png', label: 'Cobros', action: () => {} },
-    { icon: '/icons/serv-documentos.png', label: 'Trámites', action: () => {} },
+    { icon: '/icons/serv-tramites.png', label: 'Documentos', action: () => setView('documentos'), w: 49, h: 49, scale: true },
+    { icon: '/icons/serv-vehiculos.png', label: 'Vehículos', action: () => setView('vehiculos'), w: 79, h: 81, scale: true },
+    { icon: '/icons/serv-trabajo.png', label: 'Trabajo', action: () => setView('trabajo'), w: 42, h: 44, scale: true },
+    { icon: '/icons/serv-salud.png', label: 'Salud', action: () => setView('salud') },
+    { icon: '/icons/serv-cobros.png', label: 'Cobros', action: () => setView('cobros'), w: 48, h: 48, scale: true },
+    { icon: '/icons/serv-documentos.png', label: 'Trámites', action: () => setView('tramites'), w: 48, h: 48, scale: true },
     { icon: '/icons/serv-turnos.png', label: 'Turnos', action: () => {} },
-    { icon: '/icons/serv-hijos.png', label: 'Hijos', action: () => {} },
+    { icon: '/icons/serv-hijos.png', label: 'Hijos', action: () => setView('hijos'), w: 45, h: 45, scale: true },
   ];
 
   return (
-    <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh', paddingBottom: '70px' }}>
-      {/* Header - redesigned with rounded bottom */}
-      <header style={{ background: '#342BCB', position: 'relative', height: '26vh', minHeight: '200px', borderBottomLeftRadius: '40px', borderBottomRightRadius: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        {/* Top row: logo centered + avatar right */}
-        <div style={{ width: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '50px' }}>
-          <span onClick={handleLogoTap} style={{ color: '#fff', fontSize: '38px', fontWeight: 700, fontFamily: SYS_FONT, cursor: 'pointer', userSelect: 'none' }}>
-            <span style={{ color: '#7098DB' }}>mi</span>Argentina
-          </span>
-          {/* Avatar */}
-          <div style={{ position: 'absolute', right: '30px', top: '50px' }}>
-            <div style={{ width: '62px', height: '62px', borderRadius: '50%', background: '#d0d0d0', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-              <User size={30} color="#555" />
-              {/* Check overlay */}
-              <div style={{ position: 'absolute', bottom: '-2px', left: '-2px', width: '22px', height: '22px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>
-                <Check size={13} color="#7098DB" strokeWidth={3} />
-              </div>
-            </div>
-          </div>
-        </div>
-        {/* Greeting */}
-        <div style={{ marginTop: '20px', textAlign: 'center' }}>
-          <h1 style={{ fontSize: '30px', fontWeight: 400, color: '#fff', fontFamily: SYS_FONT, margin: 0 }}>¡Hola {nombre}!</h1>
-        </div>
-        {/* Scrollbar indicator on right edge */}
-        <div style={{ position: 'absolute', right: '2px', top: '50%', transform: 'translateY(-50%)', width: '4px', height: '80px', background: '#000', borderRadius: '4px' }} />
-      </header>
+    <div style={{ backgroundColor: '#f0f0f0', minHeight: '100vh', paddingBottom: '70px' }}>
+      <StatusBar />
+      <HeaderBar onLogoTap={handleLogoTap} onMenuClick={() => useAppStore.getState().setMenuOpen(true)} />
+
+      {/* Greeting section - scrolls away, has rounded bottom */}
+      <div style={{ background: '#362FC1', textAlign: 'center', paddingBottom: '24px', borderBottomLeftRadius: '30px', borderBottomRightRadius: '30px', position: 'relative' }}>
+        <h1 style={{ fontSize: '20px', fontWeight: 400, color: '#fff', fontFamily: SYS_FONT, margin: 0, padding: '0 16px' }}>¡Hola {nombre}!</h1>
+      </div>
 
       {/* Pending activation notice */}
       {!isActive && (
@@ -917,41 +1055,34 @@ function HomeView() {
         <img src="/card-mundial.png" alt="Viví el Mundial 2026" style={{ width: '100%', aspectRatio: '1077 / 298', borderRadius: '10px', objectFit: 'cover', display: 'block' }} />
       </div>
 
-      {/* Turnos Card - 1076×360 @3x → 359×120px display */}
-      <div style={{ margin: '8px 12px 0' }}>
-        <img src="/card-turnos.png" alt="No tenés turnos programados" style={{ width: '100%', aspectRatio: '1076 / 360', borderRadius: '10px', objectFit: 'cover', display: 'block' }} />
+      {/* Credentials Card Image */}
+      <div style={{ margin: '8px 12px 0', borderRadius: '10px', overflow: 'hidden' }}>
+        <img src="/credenciales.png" alt="Todas tus credenciales están al día" style={{ width: '100%', aspectRatio: '1077 / 298', objectFit: 'cover', display: 'block' }} />
       </div>
 
       {/* ¿Qué necesitás hoy? Section */}
       <div style={{ margin: '12px 12px 0' }}>
-        <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#212121', fontFamily: SYS_FONT, margin: '0 0 6px' }}>¿Qué necesitás hoy?</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+        <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'rgb(51, 51, 51)', fontFamily: "'Mula Rounded', 'MulaRounded', sans-serif", margin: '16px 0 8px', textAlign: 'left' }}>¿Qué necesitás hoy?</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
           {services.map((s, i) => (
-            <button key={i} onClick={s.action} style={{ background: '#fff', border: 'none', borderRadius: '10px', aspectRatio: '1 / 1.15', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', transition: 'transform 0.2s', fontFamily: SYS_FONT }}>
-              <div style={{ height: '42px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img src={s.icon} alt={s.label} style={{ maxWidth: '60%', maxHeight: '42px', objectFit: 'contain' }} />
+            <button key={i} onClick={s.action} style={{ background: '#fff', border: 'none', borderRadius: '17px', aspectRatio: 'auto', height: '82px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', transition: 'transform 0.2s', fontFamily: SYS_FONT }}>
+              <div style={{ height: '60px', width: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <img src={s.icon} alt={s.label} style={{ width: (s.w || 52) + 'px', height: (s.h || 52) + 'px', objectFit: 'contain', ...(s.scale ? { transform: 'scale(1.8)' } : {}) }} />
               </div>
-              <span style={{ fontSize: '11px', color: '#212121', fontWeight: 700, fontFamily: SYS_FONT, textAlign: 'center', lineHeight: 1.2, marginTop: '4px' }}>{s.label}</span>
+              <span style={{ fontSize: '11px', color: 'rgb(51, 51, 51)', fontWeight: 700, fontFamily: "'Mula Rounded', 'MulaRounded', sans-serif", textAlign: 'center', lineHeight: 1.2, marginTop: '-3px' }}>{s.label}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Próximo feriado Card */}
-      <div style={{ background: '#e3f2fd', margin: '12px 12px 0', borderRadius: '10px', padding: '12px 14px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#3730ba', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
-          <Calendar size={18} color="#fff" />
+      {/* Carrusel de carteles */}
+      <div className="hide-scrollbar" style={{ margin: '52px 12px 0', display: 'flex', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div style={{ flex: '0 0 calc(100% - 40px)', marginRight: '8px', borderRadius: '17px', overflow: 'hidden' }}>
+          <img src="/perfil.png" alt="Mantené tu perfil actualizado" style={{ width: '100%', aspectRatio: '1077 / 298', borderRadius: '17px', objectFit: 'cover', display: 'block' }} />
         </div>
-        <div style={{ flex: 1 }}>
-          <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#212121', fontFamily: SYS_FONT }}>Próximo feriado</p>
-          <p style={{ margin: '4px 0 2px', fontSize: '15px', fontWeight: 700, color: '#212121', fontFamily: SYS_FONT }}>15 de Junio</p>
-          <p style={{ margin: 0, fontSize: '12px', color: '#616161', fontFamily: SYS_FONT, lineHeight: 1.4 }}>17 de junio. Paso a la Inmortalidad del Gral. Don Martín Miguel de Güemes.</p>
+        <div style={{ flex: '0 0 calc(100% - 40px)', borderRadius: '17px', overflow: 'hidden' }}>
+          <img src="/cartel-secundario.png" alt="Más información" style={{ width: '100%', aspectRatio: '1077 / 298', borderRadius: '17px', objectFit: 'cover', display: 'block' }} />
         </div>
-      </div>
-
-      {/* Mantené tu perfil actualizado - Image */}
-      <div style={{ margin: '8px 12px 0' }}>
-        <img src="/perfil.png" alt="Mantené tu perfil actualizado" style={{ width: '100%', borderRadius: '10px', display: 'block' }} />
       </div>
 
       <BottomNavBar activeTab="home" />
@@ -961,7 +1092,7 @@ function HomeView() {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setShowAdminPrompt(false)}>
           <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', width: '85%', maxWidth: '320px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#3730ba', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#362FC1', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
                 <ShieldOff size={24} color="#fff" />
               </div>
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#212121', fontFamily: SYS_FONT }}>Acceso Admin</h3>
@@ -981,7 +1112,7 @@ function HomeView() {
               <button onClick={() => setShowAdminPrompt(false)} style={{ flex: 1, padding: '12px', border: '2px solid #e0e0e0', borderRadius: '10px', background: '#fff', color: '#757575', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT }}>
                 Cancelar
               </button>
-              <button onClick={handleAdminLogin} style={{ flex: 1, padding: '12px', border: 'none', borderRadius: '10px', background: '#3730ba', color: '#fff', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT }}>
+              <button onClick={handleAdminLogin} style={{ flex: 1, padding: '12px', border: 'none', borderRadius: '10px', background: '#362FC1', color: '#fff', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT }}>
                 Entrar
               </button>
             </div>
@@ -1002,13 +1133,18 @@ function DocumentosView() {
   const isActive = user?.isActive ?? false;
 
   return (
-    <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh', paddingBottom: '70px' }}>
-      <header style={{ background: '#3730ba', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '55px 16px 16px', position: 'sticky', top: 0, zIndex: 50 }}>
-        <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', position: 'absolute', left: '16px', top: '55px' }}><ArrowLeft size={24} /></button>
-        <span style={{ color: '#fff', fontSize: '17px', fontWeight: 600, fontFamily: SYS_FONT }}>Documentos</span>
+    <div style={{ backgroundColor: '#f5f6fa', minHeight: '100vh', paddingBottom: '70px' }}>
+      <header style={{ background: '#3333cc', display: 'flex', alignItems: 'center', padding: '55px 16px 16px', position: 'sticky', top: 0, zIndex: 50 }}>
+        <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', marginRight: '16px', padding: 0 }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M19 12H5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 19L5 12L12 5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#fff', fontFamily: SYS_FONT }}>Documentos</h1>
       </header>
 
-      <div style={{ padding: '12px', maxWidth: '550px', margin: '0 auto' }}>
+      <div style={{ padding: '20px', maxWidth: '375px', margin: '0 auto' }}>
         {!isActive && (
           <div style={{ background: '#fff3e0', borderRadius: '10px', padding: '14px 16px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '12px', border: '1px solid #ffcc80' }}>
             <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#ff9800', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -1020,25 +1156,44 @@ function DocumentosView() {
             </div>
           </div>
         )}
-        <div style={{ background: '#fff', borderRadius: '12px', marginBottom: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
-          <button onClick={() => setDniExpanded(!dniExpanded)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left' }}>
-            <FileText size={24} color="#3730ba" />
-            <span style={{ flex: 1, fontSize: '15px', fontWeight: 600, color: '#333', fontFamily: SYS_FONT }}>Documento Nacional de Identidad (DNI)</span>
-            {dniExpanded ? <ChevronUp size={20} color="#999" /> : <ChevronDown size={20} color="#999" />}
-          </button>
-          {dniExpanded && isActive && dni && (
-            <div style={{ padding: '0 16px 16px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
-                <div><p style={{ margin: 0, fontSize: '12px', color: '#9e9e9e', fontFamily: SYS_FONT }}>Documento</p><p style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#333', fontFamily: SYS_FONT }}>{formatDniNumber(dni.dniNumero)}</p></div>
-                <div><p style={{ margin: 0, fontSize: '12px', color: '#9e9e9e', fontFamily: SYS_FONT }}>Fecha de vencimiento</p><p style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#333', fontFamily: SYS_FONT }}>{calcExpiryDate(dni.fechaEmision)}</p></div>
-                <div><p style={{ margin: 0, fontSize: '12px', color: '#9e9e9e', fontFamily: SYS_FONT }}>Nombre</p><p style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#333', fontFamily: SYS_FONT }}>{dni.nombre.toUpperCase()}</p></div>
-                <div><p style={{ margin: 0, fontSize: '12px', color: '#9e9e9e', fontFamily: SYS_FONT }}>Apellido</p><p style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#333', fontFamily: SYS_FONT }}>{dni.apellido.toUpperCase()}</p></div>
+        <div style={{ background: '#fff', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden', marginBottom: '20px' }}>
+          <button onClick={() => dni ? setDniExpanded(!dniExpanded) : null} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', border: 'none', borderBottom: dniExpanded ? '1px solid #f0f0f0' : 'none', background: 'none', cursor: dni ? 'pointer' : 'default', textAlign: 'left' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <img src="/icons/dni-icon.png" alt="DNI" style={{ width: '66.248px', height: '47.32px', marginRight: '16px' }} />
+              <div style={{ width: '2px', height: '36px', backgroundColor: '#ddd', marginRight: '12px' }} />
+              <div>
+                <div style={{ fontSize: '14px', color: '#757575', marginBottom: '2px', fontFamily: SYS_FONT }}>Mis documentos</div>
+                <div style={{ fontSize: '16px', fontWeight: 700, color: '#333', lineHeight: 1.3, maxWidth: '200px', fontFamily: SYS_FONT }}>Documento Nacional de Identidad (DNI)</div>
               </div>
-              <button onClick={() => setView('dni-viewer')} style={{ width: '100%', background: '#3730ba', color: '#fff', border: 'none', borderRadius: '25px', padding: '12px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT, letterSpacing: '0.5px' }}>
+            </div>
+            {dni && (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d={dniExpanded ? "M18 15L12 9L6 15" : "M6 9L12 15L18 9"} stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            )}
+          </button>
+          {dniExpanded && (
+            <div style={{ padding: '24px 16px', textAlign: 'center' }}>
+              <button onClick={() => dni && setView('dni-viewer')} style={{ width: '100%', background: '#3333cc', color: '#fff', border: 'none', padding: '10px', borderRadius: '25px', fontSize: '14px', fontWeight: 600, cursor: dni ? 'pointer' : 'default', fontFamily: SYS_FONT, marginBottom: '24px' }}>
                 Ver DNI Digital
+              </button>
+              <div style={{ fontSize: '12px', color: '#757575', marginBottom: '40px', fontFamily: SYS_FONT }}>
+                Datos suministrados por <span style={{ color: '#33a1de', fontWeight: 600 }}>RENAPER</span>
+              </div>
+              <div style={{ fontSize: '14px', color: '#666', lineHeight: 1.5, marginBottom: '20px', textAlign: 'left', padding: '0 8px', fontFamily: SYS_FONT }}>
+                Recordá que podés solicitar el DNI para vos y tus hijos y tenerlos disponibles en la App.
+              </div>
+              <button style={{ width: '100%', background: '#fff', color: '#3333cc', border: '2px solid #3333cc', padding: '12px', borderRadius: '25px', fontSize: '16px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT, marginBottom: '12px' }}>
+                Solicitar DNI Digital
               </button>
             </div>
           )}
+          <button style={{ display: 'flex', alignItems: 'center', border: 'none', background: 'none', padding: '16px', width: '100%', cursor: 'pointer', fontFamily: SYS_FONT, borderTop: '1px solid #f0f0f0' }}>
+            <span style={{ color: '#3333cc', fontSize: '20px', marginRight: '12px', display: 'flex', alignItems: 'center' }}>
+              <img src="/icons/help-dispositivo.png" alt="Ayuda" style={{ width: '39px', height: '39px' }} />
+            </span>
+            <span style={{ color: '#3333cc', fontSize: '14px', fontWeight: 500, fontFamily: SYS_FONT }}>Cambié o voy a cambiar de dispositivo</span>
+          </button>
         </div>
 
       </div>
@@ -1090,9 +1245,9 @@ function DniViewerView() {
   const fullName = `${dni.apellido} ${dni.nombre}`.split(' ').map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
 
   return (
-    <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh', paddingBottom: '70px' }}>
+    <div style={{ backgroundColor: '#f0f0f0', minHeight: '100vh', paddingBottom: '70px' }}>
       {/* Header - matches Header_container--internal from real app */}
-      <header style={{ background: '#3730ba', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '55px 16px 16px', position: 'sticky', top: 0, zIndex: 50 }}>
+      <header style={{ background: '#362FC1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '55px 16px 16px', position: 'sticky', top: 0, zIndex: 50 }}>
         <button onClick={() => setView('documentos')} style={{ background: 'none', border: 0, cursor: 'pointer', padding: 0 }}><ArrowLeft size={24} color="#fff" /></button>
         <span style={{ color: '#fff', fontSize: '18px', fontWeight: 700, fontFamily: SYS_FONT, position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>DNI Digital</span>
         <button onClick={() => window.location.reload()} style={{ background: 'none', border: 0, cursor: 'pointer', padding: 0 }}><RefreshCw size={22} color="#fff" /></button>
@@ -1345,25 +1500,25 @@ function DniViewerView() {
       }}>
         <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
           <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/icons/logo-CASA.png" alt="Inicio" style={{ height: '24px', width: '24px', objectFit: 'contain' }} />
+            <img src="/icons/logo-CASA.png" alt="Inicio" style={{ height: '30px', width: '26px', objectFit: 'contain' }} />
           </div>
-          <span style={{ fontSize: '12px', color: '#3730ba', fontWeight: 600, fontFamily: SYS_FONT }}>Inicio</span>
+          <span style={{ fontSize: '12px', color: '#362FC1', fontWeight: 600, fontFamily: SYS_FONT }}>Inicio</span>
         </button>
         <button style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
           <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/icons/logo-NOVEDADES.png" alt="Novedades" style={{ height: '37px', width: '80px', objectFit: 'contain' }} />
+            <img src="/icons/logo-NOVEDADES.png" alt="Novedades" style={{ height: '37px', width: '80px', marginLeft: '3px', objectFit: 'contain' }} />
           </div>
           <span style={{ fontSize: '12px', color: '#757575', fontFamily: SYS_FONT }}>Novedades</span>
         </button>
         <button style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
           <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/icons/logo-TELEFONO.png" alt="Teléfonos" style={{ height: '37px', width: '50px', objectFit: 'contain' }} />
+            <img src="/icons/logo-TELEFONO.png" alt="Teléfonos" style={{ height: '37px', width: '50px', marginLeft: '-3px', objectFit: 'contain' }} />
           </div>
           <span style={{ fontSize: '12px', color: '#757575', fontFamily: SYS_FONT }}>Teléfonos</span>
         </button>
         <button style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
           <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/icons/logo-USUARIO.png" alt="Usuario" style={{ height: '24px', width: '24px', objectFit: 'contain' }} />
+            <img src="/icons/logo-USUARIO.png" alt="Usuario" style={{ height: '30px', width: '24px', objectFit: 'contain' }} />
           </div>
           <span style={{ fontSize: '12px', color: '#757575', fontFamily: SYS_FONT }}>Usuario</span>
         </button>
@@ -1444,8 +1599,8 @@ function AdminView() {
   const activeUsers = users?.filter(u => u.isActive) || [];
 
   return (
-    <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
-      <header style={{ background: '#3730ba', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '55px 16px 16px', position: 'sticky', top: 0, zIndex: 50 }}>
+    <div style={{ backgroundColor: '#f0f0f0', minHeight: '100vh' }}>
+      <header style={{ background: '#362FC1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '55px 16px 16px', position: 'sticky', top: 0, zIndex: 50 }}>
         <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}><ArrowLeft size={24} /></button>
         <span style={{ color: '#fff', fontSize: '17px', fontWeight: 600, fontFamily: SYS_FONT }}>Admin Panel</span>
         <button onClick={fetchUsers} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}><RefreshCw size={22} /></button>
@@ -1465,7 +1620,7 @@ function AdminView() {
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <RefreshCw size={32} color="#3730ba" style={{ animation: 'spin 1s linear infinite' }} />
+            <RefreshCw size={32} color="#362FC1" style={{ animation: 'spin 1s linear infinite' }} />
             <p style={{ color: '#757575', fontFamily: SYS_FONT, marginTop: '12px' }}>Cargando usuarios...</p>
           </div>
         ) : (
@@ -1583,65 +1738,46 @@ function AdminView() {
 }
 
 // ========================================
-// SHARED BLUE HEADER (rounded bottom, used in home/novedades/telefonos)
-// ========================================
-function BlueRoundedHeader({ nombre, onLogoTap }: { nombre: string; onLogoTap?: () => void }) {
-  return (
-    <header style={{ background: '#342BCB', position: 'relative', height: '26vh', minHeight: '200px', borderBottomLeftRadius: '40px', borderBottomRightRadius: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      {/* Top row: logo centered + avatar right */}
-      <div style={{ width: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '50px' }}>
-        <span onClick={onLogoTap} style={{ color: '#fff', fontSize: '38px', fontWeight: 700, fontFamily: SYS_FONT, cursor: onLogoTap ? 'pointer' : 'default', userSelect: 'none' }}>
-          <span style={{ color: '#7098DB' }}>mi</span>Argentina
-        </span>
-        {/* Avatar */}
-        <div style={{ position: 'absolute', right: '30px', top: '50px' }}>
-          <div style={{ width: '62px', height: '62px', borderRadius: '50%', background: '#d0d0d0', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-            <User size={30} color="#555" />
-            {/* Check overlay */}
-            <div style={{ position: 'absolute', bottom: '-2px', left: '-2px', width: '22px', height: '22px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>
-              <Check size={13} color="#7098DB" strokeWidth={3} />
-            </div>
-          </div>
-        </div>
-      </div>
-      {/* Greeting */}
-      <div style={{ marginTop: '20px', textAlign: 'center' }}>
-        <h1 style={{ fontSize: '30px', fontWeight: 400, color: '#fff', fontFamily: SYS_FONT, margin: 0 }}>¡Hola {nombre}!</h1>
-      </div>
-      {/* Scrollbar indicator on right edge */}
-      <div style={{ position: 'absolute', right: '2px', top: '50%', transform: 'translateY(-50%)', width: '4px', height: '80px', background: '#000', borderRadius: '4px' }} />
-    </header>
-  );
-}
-
 // ========================================
 // NOVEDADES VIEW
 // ========================================
 function NovedadesView() {
-  const { user, setView } = useAppStore();
-  const nombre = user?.dni?.nombre || 'Usuario';
+  const { setView } = useAppStore();
 
   return (
-    <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh', paddingBottom: '70px' }}>
-      <BlueRoundedHeader nombre={nombre} />
-
-      {/* Content */}
-      <div style={{ padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ background: '#fff', borderRadius: '16px', padding: '40px 24px', maxWidth: '340px', width: '100%', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', textAlign: 'center' }}>
-          {/* Document/News icon */}
-          <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-            <FileText size={40} color="#999" />
-          </div>
-          <p style={{ margin: 0, fontSize: '16px', color: '#757575', fontFamily: SYS_FONT, lineHeight: 1.5 }}>
-            No hay novedades para mostrar en este momento
-          </p>
-          <button
-            onClick={() => setView('home')}
-            style={{ marginTop: '24px', background: '#7B1FA2', color: '#fff', border: 'none', borderRadius: '25px', padding: '14px 32px', fontSize: '16px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT, width: '100%' }}
-          >
-            Volver al inicio
+    <div style={{ backgroundColor: '#f0f0f0', minHeight: '100vh', paddingBottom: '70px' }}>
+      <div style={{ background: '#3133B4' }}>
+        <StatusBar />
+        <div style={{ height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px' }}>
+          <button onClick={() => useAppStore.getState().setMenuOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '18px', width: '24px', padding: 0 }}>
+            <span style={{ display: 'block', height: '2px', width: '100%', background: '#fff', borderRadius: '2px' }} />
+            <span style={{ display: 'block', height: '2px', width: '100%', background: '#fff', borderRadius: '2px' }} />
+            <span style={{ display: 'block', height: '2px', width: '100%', background: '#fff', borderRadius: '2px' }} />
           </button>
+          <div style={{ fontSize: '24px', letterSpacing: '-0.5px', marginLeft: '10px' }}>
+            <span style={{ color: '#79A3F5', fontWeight: 400, fontFamily: SYS_FONT }}>mi</span>
+            <span style={{ color: '#fff', fontWeight: 700, fontFamily: SYS_FONT }}>Argentina</span>
+          </div>
+          <div style={{ width: '36px', height: '36px', borderRadius: '50%', overflow: 'hidden' }}>
+            <img src="/icons/profile-user.png" alt="Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
         </div>
+      </div>
+
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '80px' }}>
+        <svg viewBox="0 0 100 100" width="130" height="130">
+          <path d="M 55 23 L 75 23 C 78.3 23 81 25.7 81 29 L 81 74 C 81 77.3 78.3 80 75 80 L 55 80" fill="none" stroke="#4139be" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <rect x="23" y="12" width="46" height="68" rx="4" fill="#ffffff" stroke="#4139be" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <line x1="33" y1="30" x2="55" y2="30" stroke="#4139be" strokeWidth="4.5" strokeLinecap="round"/>
+          <line x1="33" y1="46" x2="55" y2="46" stroke="#4139be" strokeWidth="4.5" strokeLinecap="round"/>
+          <line x1="33" y1="62" x2="55" y2="62" stroke="#4139be" strokeWidth="4.5" strokeLinecap="round"/>
+        </svg>
+        <p style={{ color: '#2c2c2c', fontSize: '16px', fontWeight: 600, textAlign: 'center', width: '280px', lineHeight: 1.4, margin: '24px 0 30px', fontFamily: SYS_FONT }}>
+          No hay novedades para mostrar en<br />este momento
+        </p>
+        <button onClick={() => setView('home')} style={{ background: '#3530BA', color: '#fff', fontSize: '16px', fontWeight: 700, width: '88%', padding: '16px 0', border: 'none', borderRadius: '30px', cursor: 'pointer', fontFamily: SYS_FONT }}>
+          Volver al inicio
+        </button>
       </div>
 
       <BottomNavBar activeTab="novedades" />
@@ -1654,7 +1790,6 @@ function NovedadesView() {
 // ========================================
 function TelefonosView() {
   const { user } = useAppStore();
-  const nombre = user?.dni?.nombre || 'Usuario';
 
   const emergencyPhones = [
     { number: '911', label: 'Central de emergencias nacionales' },
@@ -1668,25 +1803,301 @@ function TelefonosView() {
   ];
 
   return (
-    <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh', paddingBottom: '70px' }}>
-      <BlueRoundedHeader nombre={nombre} />
+    <div style={{ backgroundColor: '#efefef', minHeight: '100vh', paddingBottom: '70px' }}>
+      <StatusBar />
+      <HeaderBar onMenuClick={() => useAppStore.getState().setMenuOpen(true)} />
 
       {/* Phone list */}
-      <div style={{ padding: '16px 12px 0' }}>
+      <div style={{ padding: '12px 12px 0' }}>
         {emergencyPhones.map((phone, i) => (
-          <div key={i} style={{ background: '#fff', borderRadius: '12px', padding: '16px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Phone size={20} color="#342BCB" />
+          <div key={i} style={{
+            background: '#fff',
+            borderRadius: '10px',
+            padding: '16px 20px',
+            marginBottom: '10px',
+            display: 'flex',
+            alignItems: 'center',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+            border: '1px solid #eaeaea'
+          }}>
+            {/* Number */}
+            <div style={{
+              fontSize: '26px',
+              fontWeight: 800,
+              color: '#362FC1',
+              fontFamily: "'Kapra Neue', 'KapraNeue', sans-serif",
+              width: '64px',
+              textAlign: 'left',
+              flexShrink: 0
+            }}>
+              {phone.number}
             </div>
-            <div style={{ flex: 1 }}>
-              <span style={{ fontSize: '22px', fontWeight: 700, color: '#342BCB', fontFamily: SYS_FONT, marginRight: '12px' }}>{phone.number}</span>
-              <span style={{ fontSize: '14px', color: '#616161', fontFamily: SYS_FONT, lineHeight: 1.3 }}>{phone.label}</span>
+            
+            {/* Vertical line */}
+            <div style={{
+              width: '1px',
+              height: '32px',
+              backgroundColor: '#e2e2e7',
+              margin: '0 16px'
+            }} />
+
+            {/* Label */}
+            <div style={{
+              flex: 1,
+              minWidth: 0,
+              fontSize: '15px',
+              color: '#1c1c1e',
+              fontWeight: 600,
+              fontFamily: SYS_FONT,
+              lineHeight: 1.2,
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textAlign: 'left'
+            }}>
+              {phone.label}
+            </div>
+
+            {/* Phone icon */}
+            <div style={{
+              flexShrink: 0,
+              marginLeft: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <img src="/icons/icon-telefono.png" alt="Teléfono" style={{ width: '44px', height: '30px' }} />
             </div>
           </div>
         ))}
       </div>
 
       <BottomNavBar activeTab="telefonos" />
+    </div>
+  );
+}
+
+// ========================================
+// SALUD VIEW
+// ========================================
+function SaludView() {
+  const { setView } = useAppStore();
+
+  return (
+    <div style={{ backgroundColor: '#f5f6fa', minHeight: '100vh', paddingBottom: '70px' }}>
+      <StatusBar />
+      <header style={{ background: '#3333cc', color: 'white', padding: '55px 16px 16px', display: 'flex', alignItems: 'center', height: '60px', boxSizing: 'border-box', flexShrink: 0 }}>
+        <svg onClick={() => setView('home')} style={{ marginRight: '16px', cursor: 'pointer', width: '24px', height: '24px' }} viewBox="0 0 24 24" fill="none">
+          <path d="M19 12H5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 19L5 12L12 5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#fff', fontFamily: SYS_FONT }}>Salud</h1>
+      </header>
+
+      <div style={{ padding: '20px 20px 40px' }}>
+        <h2 style={{ fontSize: '17px', fontWeight: 700, color: '#333', margin: '0 0 12px', letterSpacing: '-0.2px', fontFamily: SYS_FONT }}>Credenciales</h2>
+
+        <div style={{ background: '#fff', borderRadius: '8px', border: '1px solid #dcdce0', display: 'flex', alignItems: 'center', padding: '16px', marginBottom: '12px', cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+          <svg width="38" height="26" viewBox="0 0 38 26" fill="none" stroke="#3333cc" stroke-width="1.2" style={{ flexShrink: 0 }}>
+            <rect x="2" y="2" width="34" height="22" rx="3" />
+            <circle cx="19" cy="13" r="3.5" />
+            <path d="M19 6v3.5 M19 16.5v3.5 M12 13h3.5 M22.5 13h3.5 M14 8l2.5 2.5 M21.5 18l2.5 2.5 M24 8l-2.5 2.5 M14 18l2.5-2.5" stroke-width="1"/>
+            <circle cx="19" cy="5" r="0.8" fill="#3333cc"/>
+            <circle cx="19" cy="21" r="0.8" fill="#3333cc"/>
+            <circle cx="11" cy="13" r="0.8" fill="#3333cc"/>
+            <circle cx="27" cy="13" r="0.8" fill="#3333cc"/>
+            <circle cx="13" cy="7" r="0.8" fill="#3333cc"/>
+            <circle cx="25" cy="19" r="0.8" fill="#3333cc"/>
+            <circle cx="25" cy="7" r="0.8" fill="#3333cc"/>
+            <circle cx="13" cy="19" r="0.8" fill="#3333cc"/>
+          </svg>
+          <div style={{ width: '1px', height: '34px', background: '#e5e5ea', marginLeft: '12px', marginRight: '16px', flexShrink: 0 }} />
+          <div style={{ fontSize: '15px', fontWeight: 700, color: '#222', flex: 1, lineHeight: 1.3, fontFamily: SYS_FONT }}>Certificado de vacunación<br/>COVID 19</div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+            <path d="M6 9l6 6 6-6" stroke="#8e8e93" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+
+        <div style={{ background: '#fff', borderRadius: '8px', border: '1px solid #dcdce0', display: 'flex', alignItems: 'center', padding: '16px', marginBottom: '12px', cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+          <svg width="38" height="26" viewBox="0 0 38 26" fill="none" stroke="#3333cc" stroke-width="1.2" style={{ flexShrink: 0 }}>
+            <rect x="2" y="2" width="34" height="22" rx="3" />
+            <path d="M14.5 10.5 C14.5 8, 9.5 8, 9.5 11.5 C9.5 15, 14.5 18.5, 14.5 18.5 C14.5 18.5, 19.5 15, 19.5 11.5 C19.5 8, 14.5 8, 14.5 10.5 Z" stroke-linejoin="round"/>
+            <line x1="23" y1="9" x2="31" y2="9" stroke-linecap="round"/>
+            <line x1="23" y1="13" x2="31" y2="13" stroke-linecap="round"/>
+            <line x1="23" y1="17" x2="28" y2="17" stroke-linecap="round"/>
+          </svg>
+          <div style={{ width: '1px', height: '34px', background: '#e5e5ea', marginLeft: '12px', marginRight: '16px', flexShrink: 0 }} />
+          <div style={{ fontSize: '15px', fontWeight: 700, color: '#222', flex: 1, lineHeight: 1.3, fontFamily: SYS_FONT }}>Donación de órganos</div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+            <path d="M6 9l6 6 6-6" stroke="#8e8e93" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+
+        <h2 style={{ fontSize: '17px', fontWeight: 700, color: '#333', margin: '28px 0 12px', letterSpacing: '-0.2px', fontFamily: SYS_FONT }}>Más información de salud</h2>
+
+        <div style={{ background: '#fff', borderRadius: '8px', border: '1px solid #dcdce0', marginBottom: '24px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', padding: '18px 16px' }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3333cc" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style={{ flexShrink: 0 }}>
+              <g transform="rotate(45 12 12)">
+                <path d="M12 2v4" />
+                <path d="M9 2h6" />
+                <rect x="9" y="6" width="6" height="11" rx="1" />
+                <path d="M9 8h2" />
+                <path d="M9 11h2" />
+                <path d="M9 14h2" />
+                <path d="M10 17v1h4v-1" />
+                <path d="M12 18v4" />
+              </g>
+            </svg>
+            <div style={{ width: '1px', height: '34px', background: '#e5e5ea', marginLeft: '12px', marginRight: '16px', flexShrink: 0 }} />
+            <div style={{ fontSize: '15px', fontWeight: 700, color: '#222', flex: 1, lineHeight: 1.3, fontFamily: SYS_FONT }}>Vacunas de calendario</div>
+          </div>
+          <hr style={{ height: '1px', background: '#e5e5ea', border: 'none', margin: 0 }} />
+          <div style={{ padding: '20px 20px 24px' }}>
+            <p style={{ fontSize: '14px', color: '#444', lineHeight: 1.45, margin: '0 0 18px', fontFamily: SYS_FONT }}>Consultá tus vacunas de calendario registradas en el Ministerio de Salud de la Nación.</p>
+            <p style={{ fontSize: '14px', color: '#444', lineHeight: 1.45, margin: '0 0 18px', fontFamily: SYS_FONT }}>Es posible que algunas dosis aplicadas no se muestren porque el registro es obligatorio desde el 2023.</p>
+            <button style={{ width: '100%', background: '#fff', color: '#3333cc', border: '1.5px solid #3333cc', padding: '13px', borderRadius: '25px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT, display: 'block', textAlign: 'center' }}>Ver vacunas</button>
+          </div>
+        </div>
+      </div>
+
+      <BottomNavBar activeTab="home" />
+    </div>
+  );
+}
+
+// ========================================
+// COBROS VIEW
+// ========================================
+function CobrosView() {
+  const { setView } = useAppStore();
+
+  return (
+    <div style={{ backgroundColor: '#f5f6fa', minHeight: '100vh', paddingBottom: '70px' }}>
+      <StatusBar />
+      <header style={{ background: '#3333cc', color: 'white', padding: '55px 16px 16px', display: 'flex', alignItems: 'center', height: '60px', boxSizing: 'border-box', flexShrink: 0 }}>
+        <svg onClick={() => setView('home')} style={{ marginRight: '16px', cursor: 'pointer', width: '24px', height: '24px' }} viewBox="0 0 24 24" fill="none">
+          <path d="M19 12H5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 19L5 12L12 5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#fff', fontFamily: SYS_FONT }}>Cobros</h1>
+      </header>
+
+      <div style={{ padding: '20px' }}>
+        <div style={{ background: '#fff', borderRadius: '8px', border: '1px solid #e0e0e0', padding: '24px 20px', marginBottom: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#222', margin: '0 0 14px', fontFamily: SYS_FONT }}>Actualización de datos - PAS</h2>
+          <p style={{ fontSize: '15px', color: '#444', lineHeight: 1.45, margin: '0 0 24px', fontFamily: SYS_FONT }}>Si sos beneficiario del Programa de Acompañamiento Social debés completar el formulario de actualización de datos.</p>
+          <button style={{ width: '100%', background: '#3333cc', color: '#fff', border: 'none', padding: '10px', borderRadius: '25px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT, display: 'block', textAlign: 'center' }}>Ingresar</button>
+        </div>
+
+        <div style={{ background: '#fff', borderRadius: '8px', border: '1px solid #e0e0e0', padding: '24px 20px', marginBottom: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#222', margin: '0 0 14px', fontFamily: SYS_FONT }}>¿Necesitás ayuda?</h2>
+          <p style={{ fontSize: '15px', color: '#444', lineHeight: 1.45, margin: '0 0 24px', fontFamily: SYS_FONT }}>Podés realizar consultas o denunciar cualquier irregularidad en los programas del Ministerio de Capital Humano de manera segura y confidencial.</p>
+          <button style={{ width: '100%', background: '#3333cc', color: '#fff', border: 'none', padding: '10px', borderRadius: '25px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT, display: 'block', textAlign: 'center' }}>Contactanos</button>
+        </div>
+      </div>
+
+      <BottomNavBar activeTab="home" />
+    </div>
+  );
+}
+
+// ========================================
+// HIJOS VIEW
+// ========================================
+function HijosView() {
+  const { setView } = useAppStore();
+
+  return (
+    <div style={{ backgroundColor: '#f5f6fa', minHeight: '100vh', paddingBottom: '70px' }}>
+      <StatusBar />
+      <header style={{ background: '#3333cc', color: 'white', padding: '55px 16px 16px', display: 'flex', alignItems: 'center', height: '60px', boxSizing: 'border-box', flexShrink: 0 }}>
+        <svg onClick={() => setView('home')} style={{ marginRight: '16px', cursor: 'pointer', width: '24px', height: '24px' }} viewBox="0 0 24 24" fill="none">
+          <path d="M19 12H5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 19L5 12L12 5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#fff', fontFamily: SYS_FONT }}>Hijos</h1>
+      </header>
+
+      <div style={{ padding: '20px' }}>
+        <div style={{ background: '#fff', borderRadius: '8px', border: '1px solid #e0e0e0', boxShadow: '0 1px 2px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '24px 20px' }}>
+            <h2 style={{ fontSize: '17px', fontWeight: 700, color: '#222', margin: 0, lineHeight: 1.35, fontFamily: SYS_FONT }}>Asociá a tus hijos menores a tu perfil para acceder a sus documentos.</h2>
+          </div>
+          <hr style={{ height: '1px', background: '#f0f0f5', border: 'none', margin: 0 }} />
+          <div style={{ padding: '24px 20px' }}>
+            <p style={{ fontSize: '15px', color: '#444', lineHeight: 1.45, margin: '0 0 24px', fontFamily: SYS_FONT }}>Recordá que sólo vas a poder asociar a tus hijos menores de 18 años que estén declarados en RENAPER.</p>
+            <button style={{ width: '100%', background: '#3333cc', color: '#fff', border: 'none', padding: '10px', borderRadius: '25px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT, display: 'block', textAlign: 'center' }}>Asociar un hijo/a</button>
+          </div>
+        </div>
+      </div>
+
+      <BottomNavBar activeTab="home" />
+    </div>
+  );
+}
+
+// ========================================
+// TRABAJO VIEW
+// ========================================
+// TRÁMITES VIEW
+// ========================================
+function TramitesView() {
+  const { setView } = useAppStore();
+
+  return (
+    <div style={{ backgroundColor: '#f5f6fa', minHeight: '100vh', paddingBottom: '70px' }}>
+      <StatusBar />
+      <header style={{ background: '#3333cc', color: 'white', padding: '55px 16px 16px', display: 'flex', alignItems: 'center', height: '60px', boxSizing: 'border-box', flexShrink: 0 }}>
+        <svg onClick={() => setView('home')} style={{ marginRight: '16px', cursor: 'pointer', width: '24px', height: '24px' }} viewBox="0 0 24 24" fill="none">
+          <path d="M19 12H5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 19L5 12L12 5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#fff', fontFamily: SYS_FONT }}>Trámites</h1>
+      </header>
+
+      <div style={{ padding: '20px' }}>
+        <div style={{ background: '#fff', borderRadius: '8px', border: '1px solid #e0e0e0', marginBottom: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '20px' }}>
+            <p style={{ fontSize: '15px', color: '#444', lineHeight: 1.45, margin: '0 0 20px', fontFamily: SYS_FONT }}>
+              Consultá más trámites en <span style={{ color: '#5b8def', textDecoration: 'none' }}>TramitAR</span> o sacá un turno en <span style={{ color: '#5b8def', textDecoration: 'none' }}>Turnos</span>
+            </p>
+            <button style={{ width: '100%', background: '#3333cc', color: '#fff', border: 'none', padding: '10px', borderRadius: '25px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT, display: 'block', textAlign: 'center' }}>Ir a Turnos</button>
+          </div>
+        </div>
+
+        <div style={{ background: '#fff', borderRadius: '8px', border: '1px solid #e0e0e0', marginBottom: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', padding: '18px 16px' }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3333cc" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style={{ flexShrink: 0, marginRight: '16px' }}>
+              <path d="M9 18h4v1H9zM10 20h2v1h-2z" />
+              <path d="M11 16a5 5 0 10-3.5-8.5 5.5 5.5 0 00.5 7.5v1h6v-1a5.5 5.5 0 001.5-6" />
+              <path d="M17 14s1-1 1-3a3 3 0 00-3-3" stroke-dasharray="2 2" />
+              <path d="M16 20c1.5 0 2.5-1 2.5-2.5S17 15 17 15s-1.5 2.5-1.5 4c0 1.5.5 1 2 1z" />
+            </svg>
+            <div style={{ width: '1px', height: '34px', background: '#e5e5ea', marginRight: '16px' }} />
+            <div style={{ fontSize: '16px', fontWeight: 700, color: '#222', flex: 1, lineHeight: 1.3, fontFamily: SYS_FONT }}>Subsidios a la luz, gas y garrafa</div>
+          </div>
+          <hr style={{ height: '1px', background: '#f0f0f5', border: 'none', margin: 0 }} />
+          <div style={{ padding: '20px' }}>
+            <p style={{ fontSize: '15px', color: '#444', lineHeight: 1.45, margin: '0 0 20px', fontFamily: SYS_FONT }}>No existe un registro con tu DNI. Verificá si alguno de tus convivientes realizó la inscripción y sino, completá la solicitud</p>
+            <button style={{ width: '100%', background: '#3333cc', color: '#fff', border: 'none', padding: '10px', borderRadius: '25px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT, display: 'block', textAlign: 'center' }}>Solicitar subsidios</button>
+          </div>
+          <hr style={{ height: '1px', background: '#f0f0f5', border: 'none', margin: 0 }} />
+          <div style={{ display: 'flex', alignItems: 'center', padding: '16px 20px' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3333cc" stroke-width="1.5" style={{ flexShrink: 0, marginRight: '16px' }}>
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 16v-4" stroke-width="2" stroke-linecap="round"/>
+              <path d="M12 8h.01" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <div style={{ color: '#444', fontSize: '14px', lineHeight: 1.4, fontFamily: SYS_FONT }}>
+              Para más información ingresá a<br/>
+              <span style={{ color: '#3333cc', fontWeight: 600 }}>www.argentina.gob.ar/subsidios</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <BottomNavBar activeTab="home" />
     </div>
   );
 }
@@ -1704,9 +2115,9 @@ function TrabajoView() {
   const cuil = dniNumero ? `20${dniNumero.replace(/\D/g, '')}5` : '00000000000';
 
   return (
-    <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh', paddingBottom: '70px' }}>
+    <div style={{ backgroundColor: '#f0f0f0', minHeight: '100vh', paddingBottom: '70px' }}>
       {/* Header with back arrow */}
-      <header style={{ background: '#342BCB', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '55px 16px 16px', position: 'sticky', top: 0, zIndex: 50 }}>
+      <header style={{ background: '#362FC1', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '55px 16px 16px', position: 'sticky', top: 0, zIndex: 50 }}>
         <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', position: 'absolute', left: '16px', top: '55px' }}><ArrowLeft size={24} /></button>
         <span style={{ color: '#fff', fontSize: '17px', fontWeight: 600, fontFamily: SYS_FONT }}>Trabajo</span>
       </header>
@@ -1730,13 +2141,13 @@ function TrabajoView() {
           </div>
           {/* Download button */}
           <button
-            style={{ width: '100%', background: '#342BCB', color: '#fff', border: 'none', borderRadius: '25px', padding: '14px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT, marginBottom: '16px' }}
+            style={{ width: '100%', background: '#362FC1', color: '#fff', border: 'none', borderRadius: '25px', padding: '14px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT, marginBottom: '16px' }}
           >
             Descargar constancia de CUIL
           </button>
           {/* Data source */}
           <p style={{ margin: 0, fontSize: '12px', color: '#9e9e9e', fontFamily: SYS_FONT, textAlign: 'center' }}>
-            Datos suministrados por <span style={{ color: '#342BCB', fontWeight: 600 }}>ANSES</span>
+            Datos suministrados por <span style={{ color: '#362FC1', fontWeight: 600 }}>ANSES</span>
           </p>
         </div>
       </div>
@@ -1753,9 +2164,9 @@ function VehiculosView() {
   const { setView } = useAppStore();
 
   return (
-    <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh', paddingBottom: '70px' }}>
+    <div style={{ backgroundColor: '#f0f0f0', minHeight: '100vh', paddingBottom: '70px' }}>
       {/* Header with back arrow */}
-      <header style={{ background: '#342BCB', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '55px 16px 16px', position: 'sticky', top: 0, zIndex: 50 }}>
+      <header style={{ background: '#362FC1', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '55px 16px 16px', position: 'sticky', top: 0, zIndex: 50 }}>
         <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', position: 'absolute', left: '16px', top: '55px' }}><ArrowLeft size={24} /></button>
         <span style={{ color: '#fff', fontSize: '17px', fontWeight: 600, fontFamily: SYS_FONT }}>Vehículos</span>
       </header>
@@ -1763,7 +2174,7 @@ function VehiculosView() {
       <div style={{ padding: '16px 12px' }}>
         {/* Blue info card */}
         <div style={{ background: '#e3f2fd', borderRadius: '12px', padding: '16px', marginBottom: '12px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#342BCB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#362FC1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Car size={20} color="#fff" />
           </div>
           <p style={{ margin: 0, fontSize: '13px', color: '#333', fontFamily: SYS_FONT, lineHeight: 1.5 }}>
@@ -1779,7 +2190,7 @@ function VehiculosView() {
           </p>
           <button
             onClick={() => setView('home')}
-            style={{ width: '100%', background: '#342BCB', color: '#fff', border: 'none', borderRadius: '25px', padding: '14px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT }}
+            style={{ width: '100%', background: '#362FC1', color: '#fff', border: 'none', borderRadius: '25px', padding: '14px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT }}
           >
             Agregar servicios
           </button>

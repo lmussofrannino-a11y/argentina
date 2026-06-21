@@ -40,7 +40,7 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --color-salimoo-primary: #3730ba;
+  --color-salimoo-primary: #362FC1;
   --color-salimoo-button: #818CF8;
   --color-salimoo-button-hover: #6366F1;
   --color-salimoo-link: #6366F1;
@@ -61,7 +61,7 @@
   --card-foreground: #333333;
   --popover: #ffffff;
   --popover-foreground: #333333;
-  --primary: #3730ba;
+  --primary: #362FC1;
   --primary-foreground: #ffffff;
   --secondary: #F9FAFB;
   --secondary-foreground: #333333;
@@ -73,14 +73,14 @@
   --border: #E5E7EB;
   --input: #E5E7EB;
   --ring: #6366F1;
-  --chart-1: #3730ba;
+  --chart-1: #362FC1;
   --chart-2: #818CF8;
   --chart-3: #6366F1;
   --chart-4: #a5b4fc;
   --chart-5: #c7d2fe;
   --sidebar: #ffffff;
   --sidebar-foreground: #333333;
-  --sidebar-primary: #3730ba;
+  --sidebar-primary: #362FC1;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #F9FAFB;
   --sidebar-accent-foreground: #333333;
@@ -107,4 +107,23 @@ nextjs-portal {
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
+}
+
+/* Hide scrollbars */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none !important;  /* IE and Edge */
+  scrollbar-width: none !important;  /* Firefox */
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
 }
