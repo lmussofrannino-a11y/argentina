@@ -44,6 +44,25 @@ export async function POST(request: NextRequest) {
 
     const { password: _, ...userWithoutPassword } = user
 
+    // Auto-deactivate if 24h since activation have passed
+    if (user.isActive && user.activatedAt) {
+      const hoursSinceActivation = (Date.now() - new Date(user.activatedAt).getTime()) / (1000 * 60 * 60)
+      if (hoursSinceActivation >= 24) {
+        await db.user.update({
+          where: { id: user.id },
+          data: { isActive: false, activatedAt: null },
+        })
+        const expiredUser = { ...userWithoutPassword, isActive: false }
+        return NextResponse.json(
+          {
+            message: 'Tu cuenta ha expirado. Contactá al administrador para renovarla.',
+            user: expiredUser,
+          },
+          { status: 200 }
+        )
+      }
+    }
+
     if (!user.isActive) {
       return NextResponse.json(
         {

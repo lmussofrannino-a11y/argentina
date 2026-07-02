@@ -22,13 +22,46 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const user = await db.user.update({
-      where: { id: userId },
-      data: { isActive },
-      include: { dni: true },
-    })
+    const existingUser = await db.user.findUnique({ where: { id: userId } })
+    if (!existingUser) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+    }
 
-    const { password: _, ...userWithoutPassword } = user
+    let updatedUser
+
+    if (!isActive) {
+      updatedUser = await db.user.update({
+        where: { id: userId },
+        data: { isActive: false, activatedAt: null },
+        include: { dni: true },
+      })
+    } else if (existingUser.activatedAt) {
+      const hoursSinceActivation = (Date.now() - new Date(existingUser.activatedAt).getTime()) / (1000 * 60 * 60)
+      if (hoursSinceActivation < 24) {
+        // Re-activate without resetting timer
+        updatedUser = await db.user.update({
+          where: { id: userId },
+          data: { isActive: true },
+          include: { dni: true },
+        })
+      } else {
+        // Previous activation expired, start new 24h
+        updatedUser = await db.user.update({
+          where: { id: userId },
+          data: { isActive: true, activatedAt: new Date() },
+          include: { dni: true },
+        })
+      }
+    } else {
+      // First activation
+      updatedUser = await db.user.update({
+        where: { id: userId },
+        data: { isActive: true, activatedAt: new Date() },
+        include: { dni: true },
+      })
+    }
+
+    const { password: _, ...userWithoutPassword } = updatedUser
 
     return NextResponse.json(
       {

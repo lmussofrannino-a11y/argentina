@@ -50,6 +50,20 @@ function formatDniNumber(num: string): string {
   return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
+async function removeImageBackground(base64: string): Promise<string> {
+  const res = await fetch('/api/remove-bg', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image: base64 }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Error al eliminar el fondo');
+  }
+  const data = await res.json();
+  return data.image;
+}
+
 function formatDateBilingual(d: string): string {
   if (!d) return '-';
   const [y, m, day] = d.split('-');
@@ -363,6 +377,7 @@ export default function MiArgentinaApp() {
         {view === 'tramites' && <TramitesView />}
         {view === 'trabajo' && <TrabajoView />}
         {view === 'vehiculos' && <VehiculosView />}
+        {view === 'tina' && <TinaView />}
         <EditMenu />
       </div>
     </div>
@@ -383,7 +398,11 @@ function EditMenu() {
   const [tramiteNumero, setTramiteNumero] = useState(dni?.tramiteNumero || '');
   const [ejemplar, setEjemplar] = useState(dni?.ejemplar || '');
   const [foto, setFoto] = useState<string | null>(dni?.foto || null);
+  const [firma, setFirma] = useState<string | null>(dni?.firma || null);
+  const [removingBg, setRemovingBg] = useState(false);
+  const [isDrawing, setIsDrawing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sigCanvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     if (dni) {
@@ -397,21 +416,103 @@ function EditMenu() {
       setTramiteNumero(dni.tramiteNumero || '');
       setEjemplar(dni.ejemplar || '');
       setFoto(dni.foto || null);
+      setFirma(dni.firma || null);
     }
   }, [dni]);
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    if (!firma || !sigCanvasRef.current) return;
+    const img = new Image();
+    img.onload = () => {
+      const ctx = sigCanvasRef.current?.getContext('2d');
+      if (ctx) ctx.drawImage(img, 0, 0);
+    };
+    img.src = firma;
+  }, [firma]);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => setFoto(reader.result as string);
-    reader.readAsDataURL(file);
+    try {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64 = reader.result as string;
+        setRemovingBg(true);
+        try {
+          const cleaned = await removeImageBackground(base64);
+          setFoto(cleaned);
+        } catch {
+          setFoto(base64);
+        } finally {
+          setRemovingBg(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      // fallback: just keep the original
+    }
+  };
+
+  const handleRemoveBg = async () => {
+    if (!foto || removingBg) return;
+    setRemovingBg(true);
+    try {
+      const cleaned = await removeImageBackground(foto);
+      setFoto(cleaned);
+    } catch {
+      // keep original
+    } finally {
+      setRemovingBg(false);
+    }
+  };
+
+  const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    const canvas = sigCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    setIsDrawing(true);
+    const rect = canvas.getBoundingClientRect();
+    const x = ('touches' in e) ? e.touches[0].clientX - rect.left : e.nativeEvent.offsetX;
+    const y = ('touches' in e) ? e.touches[0].clientY - rect.top : e.nativeEvent.offsetY;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  };
+
+  const draw = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDrawing) return;
+    const canvas = sigCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = ('touches' in e) ? e.touches[0].clientX - rect.left : e.nativeEvent.offsetX;
+    const y = ('touches' in e) ? e.touches[0].clientY - rect.top : e.nativeEvent.offsetY;
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#000';
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    setIsDrawing(false);
+    const canvas = sigCanvasRef.current;
+    if (canvas) setFirma(canvas.toDataURL());
+  };
+
+  const clearSignature = () => {
+    const canvas = sigCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setFirma(null);
   };
 
   const handleSave = () => {
     updateDni({
       nombre, apellido, dniNumero, domicilio, nacimiento,
-      fechaEmision, sexo, tramiteNumero, ejemplar, foto,
+      fechaEmision, sexo, tramiteNumero, ejemplar, foto, firma,
     });
     setMenuOpen(false);
   };
@@ -441,6 +542,30 @@ function EditMenu() {
               <span style={{ color: '#362FC1', fontSize: '14px', fontWeight: 500, fontFamily: SYS_FONT }}>Seleccionar foto</span>
             </button>
           </div>
+          {foto && (
+            <button type="button" onClick={handleRemoveBg} disabled={removingBg} style={{
+              background: removingBg ? '#ccc' : '#362FC1',
+              border: 'none', borderRadius: '8px', color: '#fff', padding: '8px 16px',
+              fontSize: '13px', fontWeight: 500, cursor: removingBg ? 'not-allowed' : 'pointer',
+              fontFamily: SYS_FONT, marginBottom: '16px', width: '100%',
+            }}>
+              {removingBg ? 'Eliminando fondo...' : 'Quitar fondo'}
+            </button>
+          )}
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ color: '#362FC1', fontSize: '14px', fontWeight: 500, display: 'block', marginBottom: '6px', fontFamily: SYS_FONT }}>Firma</label>
+            <div style={{ background: '#fff', borderRadius: '8px', border: '1px solid #dbdbdb', padding: '8px' }}>
+              <canvas ref={sigCanvasRef} width={480} height={100}
+                onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing}
+                onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing}
+                style={{ width: '100%', height: '100px', border: '1px solid #000', borderRadius: '4px', cursor: 'crosshair', touchAction: 'none' }} />
+              <button type="button" onClick={clearSignature} style={{ marginTop: '8px', background: '#fff', border: '1px solid #362FC1', borderRadius: '8px', color: '#362FC1', padding: '6px 16px', fontSize: '13px', cursor: 'pointer', fontFamily: SYS_FONT, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <RotateCcw size={14} /> Limpiar
+              </button>
+            </div>
+          </div>
+
           <EditField label="Nombre" value={nombre} onChange={setNombre} />
           <EditField label="Apellido" value={apellido} onChange={setApellido} />
           <EditField label="DNI" value={dniNumero} onChange={setDniNumero} />
@@ -573,6 +698,7 @@ function RegisterView() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [firma, setFirma] = useState<string | null>(null);
   const [foto, setFoto] = useState<string | null>(null);
+  const [removingBg, setRemovingBg] = useState(false);
   const sigCanvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -620,12 +746,41 @@ function RegisterView() {
     setFirma(null);
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => setFoto(reader.result as string);
-    reader.readAsDataURL(file);
+    setError(null);
+    try {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64 = reader.result as string;
+        setRemovingBg(true);
+        try {
+          const cleaned = await removeImageBackground(base64);
+          setFoto(cleaned);
+        } catch {
+          setFoto(base64);
+        } finally {
+          setRemovingBg(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      setError('Error al procesar la imagen');
+    }
+  };
+
+  const handleRemoveBg = async () => {
+    if (!foto || removingBg) return;
+    setRemovingBg(true);
+    try {
+      const cleaned = await removeImageBackground(foto);
+      setFoto(cleaned);
+    } catch {
+      setError('Error al eliminar el fondo');
+    } finally {
+      setRemovingBg(false);
+    }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -657,7 +812,7 @@ function RegisterView() {
       </header>
 
       <div style={{ padding: '16px', maxWidth: '550px', margin: '0 auto' }}>
-        <DniPreviewCard nombre={nombre || 'Nombre'} apellido={apellido || 'Apellido'} dniNumero={dniNumero || '00000000'} sexo={sexo} nacimiento={nacimiento} fechaEmision={fechaEmision} foto={foto} firma={firma} tramiteNumero={tramiteNumero} />
+        <DniPreviewCard nombre={nombre || 'Nombre'} apellido={apellido || 'Apellido'} dniNumero={dniNumero || '00000000'} sexo={sexo} nacimiento={nacimiento} fechaEmision={fechaEmision} foto={foto} firma={firma} tramiteNumero={tramiteNumero} domicilio={domicilio} />
 
         <p style={{ color: '#8e8e8e', fontSize: '14px', textAlign: 'center', margin: '20px 0 15px', fontFamily: SYS_FONT }}>Completa tus datos</p>
 
@@ -711,6 +866,16 @@ function RegisterView() {
               <span style={{ color: '#362FC1', fontSize: '14px', fontWeight: 500, fontFamily: SYS_FONT }}>Seleccionar foto</span>
             </button>
           </div>
+          {foto && (
+            <button type="button" onClick={handleRemoveBg} disabled={removingBg} style={{
+              background: removingBg ? '#ccc' : '#362FC1',
+              border: 'none', borderRadius: '8px', color: '#fff', padding: '8px 16px',
+              fontSize: '13px', fontWeight: 500, cursor: removingBg ? 'not-allowed' : 'pointer',
+              fontFamily: SYS_FONT, marginTop: '4px',
+            }}>
+              {removingBg ? 'Eliminando fondo...' : 'Quitar fondo'}
+            </button>
+          )}
 
           <div style={{ borderTop: '1px solid #dbdbdb', margin: '8px 0', paddingTop: '8px' }}>
             <RegField label="Email" value={email} onChange={setEmail} type="email" />
@@ -745,147 +910,93 @@ function RegField({ label, value, onChange, type = 'text' }: { label: string; va
 // Pixel-perfect copy of DniViewerView's front card
 // Same container, same template, same positioning — only values differ
 // ========================================
-function DniPreviewCard({ nombre, apellido, dniNumero, sexo, nacimiento, fechaEmision, foto, firma, tramiteNumero }: {
-  nombre: string; apellido: string; dniNumero: string; sexo: string; nacimiento: string; fechaEmision: string; foto: string | null; firma: string | null; tramiteNumero?: string;
+function DniPreviewCard({ nombre, apellido, dniNumero, sexo, nacimiento, fechaEmision, foto, firma, tramiteNumero, domicilio }: {
+  nombre: string; apellido: string; dniNumero: string; sexo: string; nacimiento: string; fechaEmision: string; foto: string | null; firma: string | null; tramiteNumero?: string; domicilio?: string;
 }) {
   const DNI_FONT = "Arial, sans-serif";
+  const [showFront, setShowFront] = useState(true);
+  const scale = showFront ? 'rotateY(0)' : 'rotateY(180deg)';
 
   return (
-    <div className="DNI_content1" style={{ alignItems: 'center', display: 'flex', flexDirection: 'column', transformStyle: 'preserve-3d', width: '100%' }}>
-      <div className="DNI_imgs" style={{ aspectRatio: '1318 / 833', position: 'relative', width: '100%', backfaceVisibility: 'hidden', transform: 'translateZ(0)', zIndex: 2 }}>
-        <img className="DNI_IMG" src="/arg_front_new_bg.webp" alt="dni_img" style={{ objectFit: 'contain', width: '100%' }} />
-
-        {/* Profile photo */}
-        <div style={{ position: 'absolute', left: '7.46%', bottom: '26.22%', width: '21.62%', height: '43.19%' }}>
-          {foto ? (
-            <img alt="DNI_photoUrl" src={foto} style={{ height: '100%', objectFit: 'cover', width: '100%' }} />
-          ) : (
-            <div style={{ width: '100%', height: '100%', background: '#d0dde6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Camera size={20} color="#8aa5b8" />
+    <div style={{ cursor: 'pointer', perspective: '1000px', marginBottom: '8px' }} onClick={() => setShowFront(!showFront)}>
+      <div style={{
+        transition: 'transform 0.3s ease',
+        transform: scale,
+        transformStyle: 'preserve-3d',
+      }}>
+        <div className="DNI_imgs" style={{ aspectRatio: '1318 / 833', position: 'relative', width: '100%', backfaceVisibility: 'hidden', zIndex: 2 }}>
+          {showFront && (
+            <React.Fragment>
+            <img className="DNI_IMG" src="/arg_front_new_bg.webp" alt="dni_img" style={{ objectFit: 'contain', width: '100%' }} />
+            <div style={{ position: 'absolute', left: '7.46%', bottom: '26.22%', width: '21.62%', height: '43.19%' }}>
+              {foto ? (
+                <img alt="DNI_photoUrl" src={foto} style={{ height: '100%', objectFit: 'cover', width: '100%' }} />
+              ) : (
+                <div style={{ width: '100%', height: '100%', background: '#d0dde6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Camera size={20} color="#8aa5b8" />
+                </div>
+              )}
             </div>
+            <div style={{ position: 'absolute', top: '14.3%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '8px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>Apellido / Surname</div>
+            <div style={{ position: 'absolute', top: '20%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '11px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>{apellido.toUpperCase()}</div>
+            <div style={{ position: 'absolute', top: '26.45%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '8px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>Nombre / Name</div>
+            <div style={{ position: 'absolute', top: '31.16%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '11px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>{nombre.split(' ').map((p: string) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ')}</div>
+            <div style={{ position: 'absolute', top: '37.7%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '10px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>Sexo / Sex</div>
+            <div style={{ position: 'absolute', top: '43.72%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '11px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>{(sexo || 'M').toUpperCase()}</div>
+            <div style={{ position: 'absolute', top: '37.7%', left: '47.35%', color: '#000', fontFamily: DNI_FONT, fontSize: '10px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>Nacionalidad / Nacionality</div>
+            <div style={{ position: 'absolute', top: '43.72%', left: '47.3%', color: '#000', fontFamily: DNI_FONT, fontSize: '11px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>ARGENTINA</div>
+            <div style={{ position: 'absolute', top: '37.7%', left: '83.78%', color: '#000', fontFamily: DNI_FONT, fontSize: '10px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>Ejemplar</div>
+            <div style={{ position: 'absolute', top: '43.72%', left: '83.78%', color: '#000', fontFamily: DNI_FONT, fontSize: '10px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>A</div>
+            <div style={{ position: 'absolute', top: '49.57%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '8px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>Fecha de nacimiento/ Date of birth</div>
+            <div style={{ position: 'absolute', top: '54.28%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '12px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>{formatDateBilingual(nacimiento) || '-'}</div>
+            <div style={{ position: 'absolute', top: '60.13%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '8px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>Fecha de emision/ Date of issue</div>
+            <div style={{ position: 'absolute', top: '64%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '12px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>{formatDateBilingual(fechaEmision) || '-'}</div>
+            <div style={{ position: 'absolute', top: '69.69%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '8px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>Fecha de vencimiento/ Date of expiry</div>
+            <div style={{ position: 'absolute', top: '73.4%', left: '32.144%', color: '#000', fontFamily: DNI_FONT, fontSize: '12px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>{calcExpiryDate(fechaEmision)}</div>
+            <div style={{ position: 'absolute', top: '66%', left: '66.97%', color: '#000', fontFamily: DNI_FONT, fontSize: '6px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>FIRMA IDENTIFICADO/SIGNATURE</div>
+            <div style={{ position: 'absolute', top: '51.08%', left: '79.97%', width: '14.4%', height: '10%' }}>
+              <div style={{ position: 'absolute', top: '-8%', left: '-5%', width: '110%', height: '116%', background: '#fff', borderRadius: '2px' }} />
+            </div>
+            <div style={{ position: 'absolute', top: '51.08%', left: '78.97%', width: '18%', height: '10%' }}>
+              {firma ? (
+                <img alt="DNI_signature" src={firma} style={{ position: 'relative', height: '100%', objectFit: 'contain', width: '100%' }} />
+              ) : (
+                <div style={{ width: '100%', height: '100%' }} />
+              )}
+            </div>
+            <div style={{ position: 'absolute', top: '79.61%', left: '5.41%', color: '#000', fontFamily: DNI_FONT, fontSize: '8px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>Documento / Document</div>
+            <div style={{ position: 'absolute', top: '85.72%', left: '5%', color: '#000', fontFamily: DNI_FONT, fontSize: '15px', fontWeight: 600, lineHeight: 1.2, letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>{formatDniNumber(dniNumero)}</div>
+            <div style={{ position: 'absolute', top: '82.25%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '7.5px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>Tramite No / Of ident</div>
+            <div style={{ position: 'absolute', top: '89.67%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '8px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>{tramiteNumero || '697876124'}</div>
+            <div style={{ position: 'absolute', top: '92.67%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '8px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>4052</div>
+            <div style={{ position: 'absolute', left: '63.81%', bottom: '-9.46%', width: '33.84%', height: '42.19%', overflow: 'hidden' }}>
+              <img src="/barcode_relleno_final.png" alt="Codigo de barras" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            </div>
+            <div style={{ position: 'absolute', bottom: '2%', left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: showFront ? '#1a3a5c' : '#a0c4e0', transition: 'background-color 0.3s ease' }} />
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: showFront ? '#a0c4e0' : '#1a3a5c', transition: 'background-color 0.3s ease' }} />
+            </div>
+            </React.Fragment>
           )}
-        </div>
-
-        {/* ====== DATA AREA - Absolute positioned fields ====== */}
-        {/* Apellido / Surname label */}
-        <div style={{ position: 'absolute', top: '14.3%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '8px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-          Apellido / Surname
-        </div>
-        {/* Apellido value */}
-        <div style={{ position: 'absolute', top: '20%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '11px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-          {apellido.toUpperCase()}
-        </div>
-
-        {/* Nombre / Name label */}
-        <div style={{ position: 'absolute', top: '26.45%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '8px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-          Nombre / Name
-        </div>
-        {/* Nombre value - only first letter capitalized */}
-        <div style={{ position: 'absolute', top: '31.16%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '11px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-          {nombre.split(' ').map((p: string) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ')}
-        </div>
-
-        {/* Sexo / Sex label */}
-        <div style={{ position: 'absolute', top: '37.7%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '10px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-          Sexo / Sex
-        </div>
-        {/* Sexo value */}
-        <div style={{ position: 'absolute', top: '43.72%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '11px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-          {(sexo || 'M').toUpperCase()}
-        </div>
-
-        {/* Nacionalidad / Nacionality label */}
-        <div style={{ position: 'absolute', top: '37.7%', left: '47.35%', color: '#000', fontFamily: DNI_FONT, fontSize: '10px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-          Nacionalidad / Nacionality
-        </div>
-        {/* Nacionalidad value */}
-        <div style={{ position: 'absolute', top: '43.72%', left: '47.3%', color: '#000', fontFamily: DNI_FONT, fontSize: '11px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-          ARGENTINA
-        </div>
-
-        {/* Ejemplar label */}
-        <div style={{ position: 'absolute', top: '37.7%', left: '83.78%', color: '#000', fontFamily: DNI_FONT, fontSize: '10px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-          Ejemplar
-        </div>
-        {/* Ejemplar value */}
-        <div style={{ position: 'absolute', top: '43.72%', left: '83.78%', color: '#000', fontFamily: DNI_FONT, fontSize: '10px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-          A
-        </div>
-
-        {/* Fecha de nacimiento label */}
-        <div style={{ position: 'absolute', top: '49.57%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '8px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-          Fecha de nacimiento/ Date of birth
-        </div>
-        {/* Fecha de nacimiento value */}
-        <div style={{ position: 'absolute', top: '54.28%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '12px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-          {formatDateBilingual(nacimiento) || '-'}
-        </div>
-
-        {/* Fecha de emisión label */}
-        <div style={{ position: 'absolute', top: '60.13%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '8px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-          Fecha de emisión/ Date of issue
-        </div>
-        {/* Fecha de emisión value */}
-        <div style={{ position: 'absolute', top: '64%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '12px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-          {formatDateBilingual(fechaEmision) || '-'}
-        </div>
-
-        {/* Fecha de vencimiento label */}
-        <div style={{ position: 'absolute', top: '69.69%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '8px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-          Fecha de vencimiento/ Date of expiry
-        </div>
-        {/* Fecha de vencimiento value */}
-        <div style={{ position: 'absolute', top: '73.4%', left: '32.144%', color: '#000', fontFamily: DNI_FONT, fontSize: '12px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-          {calcExpiryDate(fechaEmision)}
-        </div>
-
-        {/* FIRMA IDENTIFICADO/SIGNATURE */}
-        <div style={{ position: 'absolute', top: '66%', left: '66.97%', color: '#000', fontFamily: DNI_FONT, fontSize: '6px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-          FIRMA IDENTIFICADO/SIGNATURE
-        </div>
-
-        {/* White background behind signature */}
-        <div style={{ position: 'absolute', top: '51.08%', left: '79.97%', width: '14.4%', height: '10%' }}>
-          <div style={{ position: 'absolute', top: '-8%', left: '-5%', width: '110%', height: '116%', background: '#fff', borderRadius: '2px' }} />
-        </div>
-        {/* Signature photo */}
-        <div style={{ position: 'absolute', top: '51.08%', left: '78.97%', width: '18%', height: '10%' }}>
-          {firma ? (
-            <img alt="DNI_signature" src={firma} style={{ position: 'relative', height: '100%', objectFit: 'contain', width: '100%' }} />
-          ) : (
-            <div style={{ width: '100%', height: '100%' }} />
+          {!showFront && (
+            <React.Fragment>
+            <img src="/dorso.png" alt="back dni" style={{ objectFit: 'contain', width: '100%' }} />
+            <div style={{ position: 'absolute', top: '5%', left: '2%', color: '#000', fontFamily: DNI_FONT, fontSize: '11px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+              <span>DOMICILIO: </span>
+              <span>{(domicilio || '-').toUpperCase()}</span>
+            </div>
+            <div style={{ position: 'absolute', top: '15%', left: '2%', color: '#000', fontFamily: DNI_FONT, fontSize: '11px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+              <span>LUGAR DE NACIMIENTO: </span>
+              <span>ARGENTINA</span>
+            </div>
+            <div style={{ position: 'absolute', bottom: '2%', left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: showFront ? '#1a3a5c' : '#a0c4e0', transition: 'background-color 0.3s ease' }} />
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: showFront ? '#a0c4e0' : '#1a3a5c', transition: 'background-color 0.3s ease' }} />
+            </div>
+            </React.Fragment>
           )}
-        </div>
-
-        {/* Documento / Document label */}
-        <div style={{ position: 'absolute', top: '79.61%', left: '5.41%', color: '#000', fontFamily: DNI_FONT, fontSize: '8px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-          Documento / Document
-        </div>
-
-        {/* DNI number - fontWeight 600 */}
-        <div style={{ position: 'absolute', top: '85.72%', left: '5%', color: '#000', fontFamily: DNI_FONT, fontSize: '15px', fontWeight: 600, lineHeight: 1.2, letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>
-          {formatDniNumber(dniNumero)}
-        </div>
-
-        {/* Tramite No / Of ident label */}
-        <div style={{ position: 'absolute', top: '82.25%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '7.5px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-          Tramite No / Of ident
-        </div>
-        {/* Tramite number */}
-        <div style={{ position: 'absolute', top: '89.67%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '8px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-          {tramiteNumero || '697876124'}
-        </div>
-        {/* Office code */}
-        <div style={{ position: 'absolute', top: '92.67%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '8px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-          4052
-        </div>
-
-        {/* Barcode - bottom right */}
-        <div style={{ position: 'absolute', left: '63.81%', bottom: '-9.46%', width: '33.84%', height: '42.19%', overflow: 'hidden' }}>
-          <img src="/barcode_relleno_final.png" alt="Código de barras" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-        </div>
-
       </div>
+    </div>
     </div>
   );
 }
@@ -931,7 +1042,7 @@ function HeaderBar({ onLogoTap, onMenuClick }: { onLogoTap?: () => void; onMenuC
   );
 }
 
-type BottomTab = 'home' | 'novedades' | 'telefonos' | 'usuario';
+type BottomTab = 'home' | 'novedades' | 'telefonos' | 'tina';
 
 function BottomNavBar({ activeTab }: { activeTab: BottomTab }) {
   const { setView } = useAppStore();
@@ -939,7 +1050,7 @@ function BottomNavBar({ activeTab }: { activeTab: BottomTab }) {
     { key: 'home', label: 'Inicio', icon: '/icons/logo-CASA.png', iconStyle: { height: '30px', width: '26px' }, action: () => setView('home') },
     { key: 'novedades', label: 'Novedades', icon: '/icons/novedadesGRIS.png', activeIcon: '/icons/novedadesVIOLETA.png', iconStyle: { height: '37px', width: '80px', marginLeft: '3px' }, action: () => setView('novedades') },
     { key: 'telefonos', label: 'Teléfonos', icon: '/icons/logo-TELEFONO.png', iconStyle: { height: '37px', width: '50px', marginLeft: '-3px' }, action: () => setView('telefonos') },
-    { key: 'usuario', label: 'Tina', icon: '/icons/logo-USUARIO.png', activeIcon: '/icons/logo-USUARIO.png', iconStyle: { height: '30px', width: '24px' }, action: () => setView('home') },
+    { key: 'tina', label: 'Tina', icon: '/icons/logo-USUARIO.png', activeIcon: '/icons/logo-USUARIO.png', iconStyle: { height: '30px', width: '24px' }, action: () => setView('tina') },
   ];
 
   return (
@@ -1174,9 +1285,16 @@ function DocumentosView() {
           </button>
           {dniExpanded && (
             <div style={{ padding: '24px 16px', textAlign: 'center' }}>
-              <button onClick={() => dni && setView('dni-viewer')} style={{ width: '100%', background: '#3333cc', color: '#fff', border: 'none', padding: '10px', borderRadius: '25px', fontSize: '14px', fontWeight: 600, cursor: dni ? 'pointer' : 'default', fontFamily: SYS_FONT, marginBottom: '24px' }}>
-                Ver DNI Digital
-              </button>
+              {isActive ? (
+                <button onClick={() => dni && setView('dni-viewer')} style={{ width: '100%', background: '#3333cc', color: '#fff', border: 'none', padding: '10px', borderRadius: '25px', fontSize: '14px', fontWeight: 600, cursor: dni ? 'pointer' : 'default', fontFamily: SYS_FONT, marginBottom: '24px' }}>
+                  Ver DNI Digital
+                </button>
+              ) : (
+                <div style={{ background: '#fff3e0', borderRadius: '10px', padding: '14px 16px', marginBottom: '24px', border: '1px solid #ffcc80' }}>
+                  <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#e65100', fontFamily: SYS_FONT }}>Cuenta pendiente de activación</p>
+                  <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#bf360c', fontFamily: SYS_FONT, lineHeight: 1.4 }}>Tu DNI digital no está disponible hasta que un administrador active tu cuenta.</p>
+                </div>
+              )}
               <div style={{ fontSize: '12px', color: '#757575', marginBottom: '40px', fontFamily: SYS_FONT }}>
                 Datos suministrados por <span style={{ color: '#33a1de', fontWeight: 600 }}>RENAPER</span>
               </div>
@@ -1282,7 +1400,13 @@ function DniViewerView() {
 
                       {/* Profile photo */}
                       <div style={{ position: 'absolute', left: '7.46%', bottom: '26.22%', width: '21.62%', height: '43.19%' }}>
-                        <img alt="DNI_photoUrl" src={dni.foto || '/sample_dniphoto.png'} style={{ height: '100%', objectFit: 'cover', width: '100%' }} />
+                        {dni.foto ? (
+                          <img alt="DNI_photoUrl" src={dni.foto} style={{ height: '100%', objectFit: 'cover', width: '100%' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', background: '#d0dde6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Camera size={20} color="#8aa5b8" />
+                          </div>
+                        )}
                       </div>
 
                       {/* ====== DATA AREA - Absolute positioned fields ====== */}
@@ -1369,7 +1493,11 @@ function DniViewerView() {
                       </div>
                       {/* Signature photo */}
                       <div style={{ position: 'absolute', top: '51.08%', left: '78.97%', width: '18%', height: '10%' }}>
-                        <img alt="DNI_signature" src={dni.firma || '/sample_signature.png'} style={{ position: 'relative', height: '100%', objectFit: 'contain', width: '100%' }} />
+                        {dni.firma ? (
+                          <img alt="DNI_signature" src={dni.firma} style={{ position: 'relative', height: '100%', objectFit: 'contain', width: '100%' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%' }} />
+                        )}
                       </div>
 
                       {/* Documento / Document label */}
@@ -2198,6 +2326,82 @@ function VehiculosView() {
       </div>
 
       <BottomNavBar activeTab="home" />
+    </div>
+  );
+}
+
+// ========================================
+// TINA VIEW
+// ========================================
+function TinaView() {
+  const { setView, user } = useAppStore();
+
+  const whatsappMsg = encodeURIComponent(
+    `Hola! Quiero activar mi cuenta de miArgentina.\n\nNombre: ${user?.dni?.nombre || '---'} ${user?.dni?.apellido || '---'}\nCorreo: ${user?.email || '---'}\n\nYa transferí $2500 al alias Punto.cero.servicio. Adjunto comprobante.`
+  );
+
+  return (
+    <div style={{ backgroundColor: '#f0f0f0', minHeight: '100vh', paddingBottom: '70px' }}>
+      <header style={{ background: '#362FC1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '55px 16px 16px', position: 'sticky', top: 0, zIndex: 50 }}>
+        <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}><ArrowLeft size={24} /></button>
+        <span style={{ color: '#fff', fontSize: '17px', fontWeight: 600, fontFamily: SYS_FONT }}>Tina</span>
+        <div style={{ width: 24 }} />
+      </header>
+
+      <div style={{ padding: '16px', maxWidth: '550px', margin: '0 auto' }}>
+        {/* Info card */}
+        <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '16px' }}>
+          <h2 style={{ margin: '0 0 12px', fontSize: '20px', fontWeight: 700, color: '#212121', fontFamily: SYS_FONT, textAlign: 'center' }}>¿Cómo funciona?</h2>
+          <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#555', fontFamily: SYS_FONT, lineHeight: 1.6, textAlign: 'center' }}>
+            Registrate y transferí <strong>$2500</strong> para tener tu cuenta habilitada por <strong>24 horas</strong>.
+          </p>
+
+          <div style={{ background: '#f5f5f5', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
+            <p style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: 600, color: '#362FC1', fontFamily: SYS_FONT }}>Datos para la transferencia:</p>
+            <p style={{ margin: '0 0 4px', fontSize: '14px', color: '#333', fontFamily: SYS_FONT }}>
+              <strong>Alias:</strong> Punto.cero.servicio
+            </p>
+            <p style={{ margin: '0', fontSize: '14px', color: '#333', fontFamily: SYS_FONT }}>
+              <strong>Monto:</strong> $2500 ARS
+            </p>
+          </div>
+
+          <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#777', fontFamily: SYS_FONT, lineHeight: 1.5, textAlign: 'center' }}>
+            Enviá el comprobante al <strong>2617463862</strong> para que podamos activar tu cuenta manualmente.
+          </p>
+
+          {/* WhatsApp button */}
+          <a
+            href={`https://wa.me/542617463862?text=${whatsappMsg}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ textDecoration: 'none' }}
+          >
+            <button style={{
+              width: '100%', padding: '14px', background: '#25D366', color: '#fff', border: 'none',
+              borderRadius: '12px', fontSize: '15px', fontWeight: 600, cursor: 'pointer',
+              fontFamily: SYS_FONT, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              boxShadow: '0 4px 12px rgba(37, 211, 102, 0.3)',
+            }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              </svg>
+              Enviar comprobante por WhatsApp
+            </button>
+          </a>
+        </div>
+
+        {/* Register button */}
+        <button onClick={() => setView('register')} style={{
+          width: '100%', padding: '14px', background: '#362FC1', color: '#fff', border: 'none',
+          borderRadius: '12px', fontSize: '15px', fontWeight: 600, cursor: 'pointer',
+          fontFamily: SYS_FONT, boxShadow: '0 4px 12px rgba(54, 47, 193, 0.3)',
+        }}>
+          Registrarse
+        </button>
+      </div>
+
+      <BottomNavBar activeTab="tina" />
     </div>
   );
 }
