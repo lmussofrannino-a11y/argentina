@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { consumeTokenIfExpired } from '@/lib/tokens'
 
 export async function GET(
   request: NextRequest,
@@ -15,36 +16,11 @@ export async function GET(
       )
     }
 
-    const user = await db.user.findUnique({
-      where: { id: userId },
-      select: { isActive: true, activatedAt: true },
-    })
+    const { isActive, tokensLeft } = await consumeTokenIfExpired(userId)
 
-    if (!user) {
+    if (!isActive) {
       return NextResponse.json(
-        { error: 'Usuario no encontrado' },
-        { status: 404 }
-      )
-    }
-
-    // Auto-deactivate if 24h since activation have passed
-    if (user.isActive && user.activatedAt) {
-      const hoursSinceActivation = (Date.now() - new Date(user.activatedAt).getTime()) / (1000 * 60 * 60)
-      if (hoursSinceActivation >= 24) {
-        await db.user.update({
-          where: { id: userId },
-          data: { isActive: false, activatedAt: null },
-        })
-        return NextResponse.json(
-          { error: 'Tu cuenta ha expirado. Contactá al administrador para renovarla.', expired: true },
-          { status: 403 }
-        )
-      }
-    }
-
-    if (!user.isActive) {
-      return NextResponse.json(
-        { error: 'Cuenta no activada', expired: !user.activatedAt ? false : true },
+        { error: 'Cuenta sin tokens disponibles', expired: true, tokens: tokensLeft },
         { status: 403 }
       )
     }
@@ -61,7 +37,7 @@ export async function GET(
     }
 
     return NextResponse.json(
-      { dni: dniData },
+      { dni: dniData, tokens: tokensLeft },
       { status: 200 }
     )
   } catch (error) {

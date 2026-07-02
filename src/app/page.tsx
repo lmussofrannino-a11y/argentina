@@ -1246,13 +1246,9 @@ function DocumentosView() {
   useEffect(() => {
     if (!user?.id) return;
     fetch(`/api/user/${user.id}`).then(res => {
-      if (res.status === 403) {
-        setUser({ ...user, isActive: false });
-      } else if (res.ok) {
+      if (res.ok) {
         res.json().then(data => {
-          if (data.user && data.user.isActive !== user.isActive) {
-            setUser(data.user);
-          }
+          if (data.user) setUser(data.user);
         });
       }
     }).catch(() => {});
@@ -1277,8 +1273,8 @@ function DocumentosView() {
               <Bell size={18} color="#fff" />
             </div>
             <div>
-              <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#e65100', fontFamily: SYS_FONT }}>Cuenta pendiente de activación</p>
-              <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#bf360c', fontFamily: SYS_FONT, lineHeight: 1.4 }}>Tu DNI digital no está disponible hasta que un administrador active tu cuenta.</p>
+              <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#e65100', fontFamily: SYS_FONT }}>Cuenta sin tokens disponibles</p>
+              <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#bf360c', fontFamily: SYS_FONT, lineHeight: 1.4 }}>Necesitás tokens para ver tu DNI digital. Conseguilos en la sección Tina.</p>
             </div>
           </div>
         )}
@@ -1306,8 +1302,8 @@ function DocumentosView() {
                 </button>
               ) : (
                 <div style={{ background: '#fff3e0', borderRadius: '10px', padding: '14px 16px', marginBottom: '24px', border: '1px solid #ffcc80' }}>
-                  <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#e65100', fontFamily: SYS_FONT }}>Cuenta pendiente de activación</p>
-                  <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#bf360c', fontFamily: SYS_FONT, lineHeight: 1.4 }}>Tu DNI digital no está disponible hasta que un administrador active tu cuenta.</p>
+                  <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#e65100', fontFamily: SYS_FONT }}>Sin tokens disponibles</p>
+                  <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#bf360c', fontFamily: SYS_FONT, lineHeight: 1.4 }}>Necesitás tokens para ver tu DNI digital. Conseguilos en la sección Tina.</p>
                 </div>
               )}
               <div style={{ fontSize: '12px', color: '#757575', marginBottom: '40px', fontFamily: SYS_FONT }}>
@@ -1681,11 +1677,13 @@ function AdminView() {
     id: string;
     email: string;
     isActive: boolean;
+    tokens: number;
     createdAt: string;
     dni: { nombre: string; apellido: string; dniNumero: string } | null;
   }> | null>(null);
   const [loading, setLoading] = useState(true);
   const [activating, setActivating] = useState<string | null>(null);
+  const [tokenInputs, setTokenInputs] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -1723,12 +1721,40 @@ function AdminView() {
       if (!res.ok) { setError(data.error || 'Error al activar'); return; }
       setSuccess(makeActive ? 'Cuenta activada ✓' : 'Cuenta desactivada ✓');
 
-      // If activating the current logged-in user, update the store
       if (user && userId === user.id) {
         setUser({ ...user, isActive: makeActive });
       }
 
-      // Refresh the list
+      await fetchUsers();
+    } catch {
+      setError('Error de conexión');
+    } finally {
+      setActivating(null);
+      setTimeout(() => setSuccess(null), 3000);
+    }
+  };
+
+  const handleAddTokens = async (userId: string) => {
+    const amount = parseInt(tokenInputs[userId] || '0', 10);
+    if (!amount || amount <= 0) return;
+    setActivating(userId);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch('/api/admin/activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': ADMIN_KEY },
+        body: JSON.stringify({ userId, addTokens: amount }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Error al asignar tokens'); return; }
+      setSuccess(`Se asignaron ${amount} token(s) ✓`);
+      setTokenInputs(prev => ({ ...prev, [userId]: '' }));
+
+      if (user && userId === user.id && data.user) {
+        setUser(data.user);
+      }
+
       await fetchUsers();
     } catch {
       setError('Error de conexión');
@@ -1772,7 +1798,7 @@ function AdminView() {
             <div style={{ marginBottom: '20px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#e65100', fontFamily: SYS_FONT, margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Bell size={18} />
-                Pendientes de activación ({pendingUsers.length})
+                Pendientes ({pendingUsers.length})
               </h3>
               {pendingUsers.length === 0 ? (
                 <div style={{ background: '#fff', borderRadius: '10px', padding: '20px', textAlign: 'center' }}>
@@ -1787,33 +1813,33 @@ function AdminView() {
                           <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#212121', fontFamily: SYS_FONT }}>
                             {u.dni ? `${u.dni.apellido}, ${u.dni.nombre}` : 'Sin datos'}
                           </p>
-                          <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#757575', fontFamily: SYS_FONT }}>
-                            {u.email}
-                          </p>
+                          <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#757575', fontFamily: SYS_FONT }}>{u.email}</p>
                           <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#9e9e9e', fontFamily: SYS_FONT }}>
-                            DNI: {u.dni?.dniNumero || '-'} · Registrado: {new Date(u.createdAt).toLocaleDateString('es')}
+                            DNI: {u.dni?.dniNumero || '-'} · Tokens: {u.tokens} · Registrado: {new Date(u.createdAt).toLocaleDateString('es')}
                           </p>
+                          <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                            <input
+                              type="number"
+                              min="1"
+                              placeholder="Tokens"
+                              value={tokenInputs[u.id] || ''}
+                              onChange={(e) => setTokenInputs(prev => ({ ...prev, [u.id]: e.target.value }))}
+                              style={{ width: '70px', padding: '4px 6px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '13px' }}
+                            />
+                            <button
+                              onClick={() => handleAddTokens(u.id)}
+                              disabled={activating === u.id || !tokenInputs[u.id] || parseInt(tokenInputs[u.id] || '0') <= 0}
+                              style={{
+                                background: '#ff9800',
+                                border: 'none', borderRadius: '6px', color: '#fff',
+                                padding: '4px 10px', fontSize: '12px', fontWeight: 600,
+                                cursor: 'pointer', fontFamily: SYS_FONT,
+                              }}
+                            >
+                              + Tokens
+                            </button>
+                          </div>
                         </div>
-                        <button
-                          onClick={() => handleActivate(u.id, true)}
-                          disabled={activating === u.id}
-                          style={{
-                            background: activating === u.id ? '#81c784' : '#4caf50',
-                            border: 'none',
-                            borderRadius: '8px',
-                            color: '#fff',
-                            padding: '8px 14px',
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            cursor: activating === u.id ? 'not-allowed' : 'pointer',
-                            fontFamily: SYS_FONT,
-                            whiteSpace: 'nowrap',
-                            flexShrink: 0,
-                            marginLeft: '10px',
-                          }}
-                        >
-                          {activating === u.id ? '...' : 'Activar'}
-                        </button>
                       </div>
                     </div>
                   ))}
@@ -1825,7 +1851,7 @@ function AdminView() {
             <div>
               <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#2e7d32', fontFamily: SYS_FONT, margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <ShieldOff size={18} />
-                Cuentas activas ({activeUsers.length})
+                Activas ({activeUsers.length})
               </h3>
               {activeUsers.length === 0 ? (
                 <div style={{ background: '#fff', borderRadius: '10px', padding: '20px', textAlign: 'center' }}>
@@ -1840,29 +1866,42 @@ function AdminView() {
                           <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#212121', fontFamily: SYS_FONT }}>
                             {u.dni ? `${u.dni.apellido}, ${u.dni.nombre}` : 'Sin datos'}
                           </p>
-                          <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#757575', fontFamily: SYS_FONT }}>
-                            {u.email}
-                          </p>
+                          <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#757575', fontFamily: SYS_FONT }}>{u.email}</p>
                           <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#9e9e9e', fontFamily: SYS_FONT }}>
-                            DNI: {u.dni?.dniNumero || '-'} · Registrado: {new Date(u.createdAt).toLocaleDateString('es')}
+                            DNI: {u.dni?.dniNumero || '-'} · Tokens restantes: {u.tokens}
                           </p>
+                          <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                            <input
+                              type="number"
+                              min="1"
+                              placeholder="Tokens"
+                              value={tokenInputs[u.id] || ''}
+                              onChange={(e) => setTokenInputs(prev => ({ ...prev, [u.id]: e.target.value }))}
+                              style={{ width: '70px', padding: '4px 6px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '13px' }}
+                            />
+                            <button
+                              onClick={() => handleAddTokens(u.id)}
+                              disabled={activating === u.id || !tokenInputs[u.id] || parseInt(tokenInputs[u.id] || '0') <= 0}
+                              style={{
+                                background: '#4caf50',
+                                border: 'none', borderRadius: '6px', color: '#fff',
+                                padding: '4px 10px', fontSize: '12px', fontWeight: 600,
+                                cursor: 'pointer', fontFamily: SYS_FONT,
+                              }}
+                            >
+                              + Tokens
+                            </button>
+                          </div>
                         </div>
                         <button
                           onClick={() => handleActivate(u.id, false)}
                           disabled={activating === u.id}
                           style={{
                             background: activating === u.id ? '#ef9a9a' : '#f44336',
-                            border: 'none',
-                            borderRadius: '8px',
-                            color: '#fff',
-                            padding: '8px 14px',
-                            fontSize: '13px',
-                            fontWeight: 600,
+                            border: 'none', borderRadius: '8px', color: '#fff',
+                            padding: '8px 14px', fontSize: '13px', fontWeight: 600,
                             cursor: activating === u.id ? 'not-allowed' : 'pointer',
-                            fontFamily: SYS_FONT,
-                            whiteSpace: 'nowrap',
-                            flexShrink: 0,
-                            marginLeft: '10px',
+                            fontFamily: SYS_FONT, whiteSpace: 'nowrap', flexShrink: 0, marginLeft: '10px',
                           }}
                         >
                           {activating === u.id ? '...' : 'Desactivar'}
@@ -2352,7 +2391,7 @@ function TinaView() {
   const { setView, user } = useAppStore();
 
   const whatsappMsg = encodeURIComponent(
-    `Hola! Quiero activar mi cuenta de miArgentina.\n\nNombre: ${user?.dni?.nombre || '---'} ${user?.dni?.apellido || '---'}\nCorreo: ${user?.email || '---'}\n\nYa transferí $2500 al alias Punto.cero.servicio. Adjunto comprobante.`
+    `Hola! Quiero comprar tokens para mi cuenta de miArgentina.\n\nNombre: ${user?.dni?.nombre || '---'} ${user?.dni?.apellido || '---'}\nCorreo: ${user?.email || '---'}\n\nTokens solicitados:\nMonto transferido:`
   );
 
   return (
@@ -2366,23 +2405,38 @@ function TinaView() {
       <div style={{ padding: '16px', maxWidth: '550px', margin: '0 auto' }}>
         {/* Info card */}
         <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '16px' }}>
-          <h2 style={{ margin: '0 0 12px', fontSize: '20px', fontWeight: 700, color: '#212121', fontFamily: SYS_FONT, textAlign: 'center' }}>¿Cómo funciona?</h2>
+          <h2 style={{ margin: '0 0 12px', fontSize: '20px', fontWeight: 700, color: '#212121', fontFamily: SYS_FONT, textAlign: 'center' }}>Tokens</h2>
           <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#555', fontFamily: SYS_FONT, lineHeight: 1.6, textAlign: 'center' }}>
-            Registrate y transferí <strong>$2500</strong> para tener tu cuenta habilitada por <strong>24 horas</strong>.
+            Cada token te habilita el documento por <strong>24 horas</strong>.
           </p>
 
           <div style={{ background: '#f5f5f5', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
-            <p style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: 600, color: '#362FC1', fontFamily: SYS_FONT }}>Datos para la transferencia:</p>
+            <p style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: 600, color: '#362FC1', fontFamily: SYS_FONT }}>Precios:</p>
             <p style={{ margin: '0 0 4px', fontSize: '14px', color: '#333', fontFamily: SYS_FONT }}>
-              <strong>Alias:</strong> Punto.cero.servicio
+              <strong>1 token</strong> — $2500 (24hs)
             </p>
-            <p style={{ margin: '0', fontSize: '14px', color: '#333', fontFamily: SYS_FONT }}>
-              <strong>Monto:</strong> $2500 ARS
+            <p style={{ margin: '0 0 12px', fontSize: '14px', color: '#333', fontFamily: SYS_FONT }}>
+              <strong>5 tokens</strong> — $10000 ($2000 c/u)
+            </p>
+            <div style={{ borderTop: '1px solid #ddd', paddingTop: '10px' }}>
+              <p style={{ margin: '0 0 4px', fontSize: '13px', fontWeight: 600, color: '#362FC1', fontFamily: SYS_FONT }}>Datos para la transferencia:</p>
+              <p style={{ margin: '0 0 4px', fontSize: '14px', color: '#333', fontFamily: SYS_FONT }}>
+                <strong>Alias:</strong> Punto.cero.servicio
+              </p>
+              <p style={{ margin: '0', fontSize: '14px', color: '#333', fontFamily: SYS_FONT }}>
+                <strong>Monto:</strong> según la cantidad de tokens
+              </p>
+            </div>
+          </div>
+
+          <div style={{ background: '#fff8e1', borderRadius: '8px', padding: '12px', marginBottom: '16px', border: '1px solid #ffe082' }}>
+            <p style={{ margin: 0, fontSize: '12px', color: '#e65100', fontFamily: SYS_FONT, lineHeight: 1.5, textAlign: 'center' }}>
+              ⚠️ Los tokens no son transferibles a otras cuentas. Solo se pueden usar en la cuenta para la que fueron adquiridos.
             </p>
           </div>
 
           <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#777', fontFamily: SYS_FONT, lineHeight: 1.5, textAlign: 'center' }}>
-            Enviá el comprobante al <strong>2617463862</strong> para que podamos activar tu cuenta manualmente.
+            Enviá el comprobante al <strong>2617463862</strong> para que asignemos los tokens a tu cuenta.
           </p>
 
           {/* WhatsApp button */}

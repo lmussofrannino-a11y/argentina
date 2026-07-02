@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { consumeTokenIfExpired } from '@/lib/tokens'
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,32 +43,27 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { password: _, ...userWithoutPassword } = user
+    // Consume token if current one expired, or activate next token
+    const { isActive, tokensLeft } = await consumeTokenIfExpired(user.id)
 
-    // Auto-deactivate if 24h since activation have passed
-    if (user.isActive && user.activatedAt) {
-      const hoursSinceActivation = (Date.now() - new Date(user.activatedAt).getTime()) / (1000 * 60 * 60)
-      if (hoursSinceActivation >= 24) {
-        await db.user.update({
-          where: { id: user.id },
-          data: { isActive: false, activatedAt: null },
-        })
-        const expiredUser = { ...userWithoutPassword, isActive: false }
-        return NextResponse.json(
-          {
-            message: 'Tu cuenta ha expirado. Contactá al administrador para renovarla.',
-            user: expiredUser,
-          },
-          { status: 200 }
-        )
-      }
+    const { password: _, ...userWithoutPassword } = user
+    const updatedUser = { ...userWithoutPassword, isActive, tokens: tokensLeft }
+
+    if (!isActive && tokensLeft === 0) {
+      return NextResponse.json(
+        {
+          message: 'Tu cuenta no tiene tokens disponibles. Contactá al administrador.',
+          user: updatedUser,
+        },
+        { status: 200 }
+      )
     }
 
-    if (!user.isActive) {
+    if (!isActive) {
       return NextResponse.json(
         {
           message: 'Tu cuenta está pendiente de activación',
-          user: userWithoutPassword,
+          user: updatedUser,
         },
         { status: 200 }
       )
@@ -76,7 +72,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         message: 'Inicio de sesión exitoso',
-        user: userWithoutPassword,
+        user: updatedUser,
       },
       { status: 200 }
     )

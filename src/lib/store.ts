@@ -21,10 +21,11 @@ export interface UserData {
   id: string;
   email: string;
   isActive: boolean;
+  tokens: number;
   dni: DniData | null;
 }
 
-export type AppView = 'login' | 'register' | 'home' | 'documentos' | 'dni-viewer' | 'admin' | 'novedades' | 'telefonos' | 'trabajo' | 'vehiculos' | 'salud' | 'cobros' | 'hijos' | 'tramites';
+export type AppView = 'login' | 'register' | 'home' | 'documentos' | 'dni-viewer' | 'admin' | 'novedades' | 'telefonos' | 'trabajo' | 'vehiculos' | 'salud' | 'cobros' | 'hijos' | 'tramites' | 'tina';
 
 interface AppState {
   view: AppView;

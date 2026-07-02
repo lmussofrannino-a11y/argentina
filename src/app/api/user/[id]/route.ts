@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { consumeTokenIfExpired } from '@/lib/tokens'
 
 export async function GET(
   request: NextRequest,
@@ -15,6 +16,9 @@ export async function GET(
       )
     }
 
+    // Consume token if current one expired, or activate next token
+    const { isActive, tokensLeft } = await consumeTokenIfExpired(id)
+
     const user = await db.user.findUnique({
       where: { id },
       include: {
@@ -29,25 +33,11 @@ export async function GET(
       )
     }
 
-    // Auto-deactivate if 24h since activation have passed
-    if (user.isActive && user.activatedAt) {
-      const hoursSinceActivation = (Date.now() - new Date(user.activatedAt).getTime()) / (1000 * 60 * 60)
-      if (hoursSinceActivation >= 24) {
-        await db.user.update({
-          where: { id: user.id },
-          data: { isActive: false, activatedAt: null },
-        })
-        return NextResponse.json(
-          { error: 'Tu cuenta ha expirado. Contactá al administrador para renovarla.', expired: true },
-          { status: 403 }
-        )
-      }
-    }
-
     const { password: _, ...userWithoutPassword } = user
+    const updatedUser = { ...userWithoutPassword, isActive, tokens: tokensLeft }
 
     return NextResponse.json(
-      { user: userWithoutPassword },
+      { user: updatedUser },
       { status: 200 }
     )
   } catch (error) {
@@ -58,4 +48,3 @@ export async function GET(
     )
   }
 }
-
