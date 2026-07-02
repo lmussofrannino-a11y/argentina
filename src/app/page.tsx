@@ -1238,10 +1238,25 @@ function HomeView() {
 // DOCUMENTOS VIEW
 // ========================================
 function DocumentosView() {
-  const { user, setView } = useAppStore();
+  const { user, setView, setUser } = useAppStore();
   const [dniExpanded, setDniExpanded] = useState(true);
   const dni = user?.dni;
   const isActive = user?.isActive ?? false;
+
+  useEffect(() => {
+    if (!user?.id) return;
+    fetch(`/api/user/${user.id}`).then(res => {
+      if (res.status === 403) {
+        setUser({ ...user, isActive: false });
+      } else if (res.ok) {
+        res.json().then(data => {
+          if (data.user && data.user.isActive !== user.isActive) {
+            setUser(data.user);
+          }
+        });
+      }
+    }).catch(() => {});
+  }, []);
 
   return (
     <div style={{ backgroundColor: '#f5f6fa', minHeight: '100vh', paddingBottom: '70px' }}>

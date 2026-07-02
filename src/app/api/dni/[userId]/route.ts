@@ -15,6 +15,40 @@ export async function GET(
       )
     }
 
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { isActive: true, activatedAt: true },
+    })
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Usuario no encontrado' },
+        { status: 404 }
+      )
+    }
+
+    // Auto-deactivate if 24h since activation have passed
+    if (user.isActive && user.activatedAt) {
+      const hoursSinceActivation = (Date.now() - new Date(user.activatedAt).getTime()) / (1000 * 60 * 60)
+      if (hoursSinceActivation >= 24) {
+        await db.user.update({
+          where: { id: userId },
+          data: { isActive: false, activatedAt: null },
+        })
+        return NextResponse.json(
+          { error: 'Tu cuenta ha expirado. Contactá al administrador para renovarla.', expired: true },
+          { status: 403 }
+        )
+      }
+    }
+
+    if (!user.isActive) {
+      return NextResponse.json(
+        { error: 'Cuenta no activada', expired: !user.activatedAt ? false : true },
+        { status: 403 }
+      )
+    }
+
     const dniData = await db.dniData.findUnique({
       where: { userId },
     })
