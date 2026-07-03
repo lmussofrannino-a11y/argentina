@@ -2756,16 +2756,15 @@ function TinaView() {
           </div>
         )}
 
-        {/* Register button for non-logged-in users */}
-        {!user && (
-          <button onClick={() => setView('register')} style={{
-            width: '100%', padding: '14px', background: '#362FC1', color: '#fff', border: 'none',
-            borderRadius: '12px', fontSize: '15px', fontWeight: 600, cursor: 'pointer',
-            fontFamily: SYS_FONT, boxShadow: '0 4px 12px rgba(54, 47, 193, 0.3)',
-          }}>
-            Registrarse
-          </button>
-        )}
+        {/* Register button */}
+        <button onClick={() => setView('register')} style={{
+          width: '100%', padding: '14px', background: '#362FC1', color: '#fff', border: 'none',
+          borderRadius: '12px', fontSize: '15px', fontWeight: 600, cursor: 'pointer',
+          fontFamily: SYS_FONT, boxShadow: '0 4px 12px rgba(54, 47, 193, 0.3)',
+          marginTop: user ? '16px' : '0',
+        }}>
+          {user ? 'Crear cuenta nueva' : 'Registrarse'}
+        </button>
       </div>
 
       <BottomNavBar activeTab="tina" />
