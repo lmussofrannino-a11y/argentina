@@ -29,6 +29,9 @@ import {
   ChevronRight,
   Ticket,
   Search,
+  Timer,
+  Zap,
+  CreditCard,
 } from 'lucide-react';
 
 // ========================================
@@ -348,6 +351,41 @@ export default function MiArgentinaApp() {
     const obs = new MutationObserver(hide);
     obs.observe(document.body, { childList: true, subtree: true });
     return () => obs.disconnect();
+  }, []);
+
+  // Handle Mercado Pago redirect after payment
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const paymentSuccess = params.get('payment_success')
+    const paymentFailure = params.get('payment_failure')
+
+    if (paymentSuccess === 'true' && user?.id) {
+      // Verify payment by looking up the user's payments
+      fetch('/api/mercadopago/verify-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      }).then(res => {
+        res.json().then(data => {
+          if (data.success) {
+            setUser({ ...user, tokens: data.tokens })
+          }
+          setView('tina')
+        })
+      }).catch(() => {
+        setView('tina')
+      })
+      window.history.replaceState({}, '', window.location.pathname)
+    } else if (paymentSuccess === 'true') {
+      // User not logged in yet, redirect to login first
+      setView('login')
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+
+    if (paymentFailure === 'true') {
+      setView('tina')
+      window.history.replaceState({}, '', window.location.pathname)
+    }
   }, []);
 
   // Wait for Zustand persist to rehydrate from localStorage before rendering
@@ -2388,11 +2426,170 @@ function VehiculosView() {
 // TINA VIEW
 // ========================================
 function TinaView() {
-  const { setView, user } = useAppStore();
+  const { setView, user, setUser } = useAppStore();
+  const [selectedPack, setSelectedPack] = useState<'1' | '5'>('1');
+  const [loading, setLoading] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [remainingTime, setRemainingTime] = useState<string | null>(null);
+  const [activatedAtDate, setActivatedAtDate] = useState<Date | null>(null);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
 
-  const whatsappMsg = encodeURIComponent(
-    `Hola! Quiero comprar tokens para mi cuenta de miArgentina.\n\nNombre: ${user?.dni?.nombre || '---'} ${user?.dni?.apellido || '---'}\nCorreo: ${user?.email || '---'}\n\nTokens solicitados:\nMonto transferido:`
-  );
+  // Refresh user data on mount
+  useEffect(() => {
+    if (!user?.id) return;
+    fetch(`/api/user/${user.id}`).then(res => {
+      if (res.ok) res.json().then(data => {
+        if (data.user) setUser(data.user);
+      });
+    }).catch(() => {});
+  }, []);
+
+  // Calculate remaining time
+  useEffect(() => {
+    if (!user?.isActive) {
+      setRemainingTime(null);
+      setActivatedAtDate(null);
+      return
+    }
+
+    // We need activatedAt from the user - fetch the latest if not available
+    const fetchUser = async () => {
+      if (!user.id) return
+      try {
+        const res = await fetch(`/api/user/${user.id}`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data.user) {
+            setUser(data.user)
+            if (data.user.activatedAt) {
+              setActivatedAtDate(new Date(data.user.activatedAt))
+            }
+          }
+        }
+      } catch {}
+    }
+
+    if (!user.activatedAt) {
+      fetchUser()
+    } else {
+      setActivatedAtDate(new Date(user.activatedAt))
+    }
+  }, [user?.isActive, user?.activatedAt])
+
+  // Update remaining time every second
+  useEffect(() => {
+    if (!activatedAtDate) {
+      setRemainingTime(null)
+      return
+    }
+
+    const update = () => {
+      const now = Date.now()
+      const end = activatedAtDate.getTime() + 24 * 60 * 60 * 1000
+      const diff = end - now
+
+      if (diff <= 0) {
+        setRemainingTime('Expirado')
+        return
+      }
+
+      const h = Math.floor(diff / (1000 * 60 * 60))
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+      const s = Math.floor((diff % (1000 * 60)) / 1000)
+      setRemainingTime(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`)
+    }
+
+    update()
+    const interval = setInterval(update, 1000)
+    return () => clearInterval(interval)
+  }, [activatedAtDate])
+
+  const handleMpPayment = async () => {
+    if (!user?.id || !user?.email) {
+      setError('Debes iniciar sesión para comprar tokens')
+      return
+    }
+    setPaymentLoading(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const quantity = selectedPack === '1' ? 1 : 5
+      const unitPrice = selectedPack === '1' ? 2500 : 10000
+      const title = selectedPack === '1' ? '1 Token miArgentina' : '5 Tokens miArgentina'
+
+      const res = await fetch('/api/mercadopago/create-preference', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          email: user.email,
+          title,
+          quantity,
+          unitPrice,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.detail || data.error || 'Error al crear el pago'); return }
+      window.location.href = data.init_point
+    } catch {
+      setError('Error de conexión')
+    } finally {
+      setPaymentLoading(false)
+    }
+  }
+
+  const handleUseToken = async () => {
+    if (!user?.id) return
+    setLoading(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const res = await fetch('/api/tokens/use', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Error al usar token'); return }
+
+      setUser({
+        ...user,
+        isActive: data.isActive,
+        tokens: data.tokensLeft,
+      })
+      setMessage(data.message || 'Token activado correctamente')
+      setTimeout(() => setMessage(null), 5000)
+    } catch {
+      setError('Error de conexión')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleVerifyPayment = async () => {
+    if (!user?.id) return
+    setVerifyingPayment(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const res = await fetch('/api/mercadopago/verify-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'No se encontró un pago aprobado'); return }
+      setUser({ ...user, tokens: data.tokens })
+      setMessage(`Pago verificado! Se acreditaron ${data.quantity} token(s).`)
+      setTimeout(() => setMessage(null), 5000)
+    } catch {
+      setError('Error de conexión')
+    } finally {
+      setVerifyingPayment(false)
+    }
+  }
 
   return (
     <div style={{ backgroundColor: '#f0f0f0', minHeight: '100vh', paddingBottom: '70px' }}>
@@ -2403,71 +2600,172 @@ function TinaView() {
       </header>
 
       <div style={{ padding: '16px', maxWidth: '550px', margin: '0 auto' }}>
-        {/* Info card */}
-        <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '16px' }}>
-          <h2 style={{ margin: '0 0 12px', fontSize: '20px', fontWeight: 700, color: '#212121', fontFamily: SYS_FONT, textAlign: 'center' }}>Tokens</h2>
-          <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#555', fontFamily: SYS_FONT, lineHeight: 1.6, textAlign: 'center' }}>
-            Cada token te habilita el documento por <strong>24 horas</strong>.
-          </p>
 
-          <div style={{ background: '#f5f5f5', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
-            <p style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: 600, color: '#362FC1', fontFamily: SYS_FONT }}>Precios:</p>
-            <p style={{ margin: '0 0 4px', fontSize: '14px', color: '#333', fontFamily: SYS_FONT }}>
-              <strong>1 token</strong> — $2500 (24hs)
+        {/* Token Balance Card */}
+        {user ? (
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '16px', textAlign: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
+              <Zap size={24} color="#362FC1" />
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: '#212121', fontFamily: SYS_FONT }}>
+                Tus Tokens
+              </h2>
+            </div>
+            <div style={{ fontSize: '48px', fontWeight: 800, color: '#362FC1', fontFamily: SYS_FONT, lineHeight: 1.2 }}>
+              {user.tokens}
+            </div>
+            <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#757575', fontFamily: SYS_FONT }}>
+              tokens disponibles
             </p>
-            <p style={{ margin: '0 0 12px', fontSize: '14px', color: '#333', fontFamily: SYS_FONT }}>
-              <strong>5 tokens</strong> — $10000 ($2000 c/u)
+
+            {/* Active status & timer */}
+            {user.isActive && remainingTime && (
+              <div style={{ marginTop: '16px', background: '#e8f5e9', borderRadius: '12px', padding: '12px', border: '1px solid #a5d6a7' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                  <Timer size={16} color="#2e7d32" />
+                  <span style={{ fontSize: '14px', fontWeight: 600, color: '#2e7d32', fontFamily: SYS_FONT }}>
+                    Documento activo
+                  </span>
+                </div>
+                <div style={{ fontSize: '24px', fontWeight: 700, color: '#2e7d32', fontFamily: 'monospace', marginTop: '4px' }}>
+                  {remainingTime}
+                </div>
+                <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#558b2f', fontFamily: SYS_FONT }}>
+                  tiempo restante de tu token actual
+                </p>
+              </div>
+            )}
+
+            {!user.isActive && user.tokens > 0 && (
+              <div style={{ marginTop: '16px' }}>
+                <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#757575', fontFamily: SYS_FONT }}>
+                  Tenés tokens disponibles. Activá uno para ver tu documento.
+                </p>
+                <button onClick={handleUseToken} disabled={loading} style={{
+                  width: '100%', padding: '14px', background: loading ? '#362FC180' : '#362FC1',
+                  color: '#fff', border: 'none', borderRadius: '12px', fontSize: '15px',
+                  fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer',
+                  fontFamily: SYS_FONT, display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', gap: '8px',
+                  boxShadow: '0 4px 12px rgba(54, 47, 193, 0.3)',
+                }}>
+                  {loading ? 'Activando...' : <><Zap size={18} /> Activar documento (24hs)</>}
+                </button>
+              </div>
+            )}
+
+            {!user.isActive && user.tokens === 0 && (
+              <div style={{ marginTop: '12px', background: '#fff8e1', borderRadius: '8px', padding: '10px', border: '1px solid #ffe082' }}>
+                <p style={{ margin: 0, fontSize: '12px', color: '#e65100', fontFamily: SYS_FONT }}>
+                  No tenés tokens. Comprá un pack para activar tu documento.
+                </p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '16px', textAlign: 'center' }}>
+            <p style={{ margin: '0 0 12px', fontSize: '14px', color: '#757575', fontFamily: SYS_FONT }}>
+              Iniciá sesión para ver tus tokens
             </p>
-            <div style={{ borderTop: '1px solid #ddd', paddingTop: '10px' }}>
-              <p style={{ margin: '0 0 4px', fontSize: '13px', fontWeight: 600, color: '#362FC1', fontFamily: SYS_FONT }}>Datos para la transferencia:</p>
-              <p style={{ margin: '0 0 4px', fontSize: '14px', color: '#333', fontFamily: SYS_FONT }}>
-                <strong>Alias:</strong> Punto.cero.servicio
-              </p>
-              <p style={{ margin: '0', fontSize: '14px', color: '#333', fontFamily: SYS_FONT }}>
-                <strong>Monto:</strong> según la cantidad de tokens
+            <button onClick={() => setView('login')} style={{
+              padding: '12px 30px', background: '#362FC1', color: '#fff', border: 'none',
+              borderRadius: '12px', fontSize: '15px', fontWeight: 600, cursor: 'pointer',
+              fontFamily: SYS_FONT,
+            }}>
+              Iniciar sesión
+            </button>
+          </div>
+        )}
+
+        {message && (
+          <div style={{ background: '#e8f5e9', borderRadius: '12px', padding: '12px 16px', marginBottom: '16px', border: '1px solid #a5d6a7' }}>
+            <p style={{ margin: 0, fontSize: '14px', color: '#2e7d32', fontFamily: SYS_FONT, textAlign: 'center' }}>{message}</p>
+          </div>
+        )}
+
+        {error && (
+          <div style={{ background: '#ffebee', borderRadius: '12px', padding: '12px 16px', marginBottom: '16px', border: '1px solid #ef9a9a' }}>
+            <p style={{ margin: 0, fontSize: '14px', color: '#c62828', fontFamily: SYS_FONT, textAlign: 'center' }}>{error}</p>
+          </div>
+        )}
+
+        {/* Buy Tokens Card */}
+        {user && (
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '16px' }}>
+            <h2 style={{ margin: '0 0 12px', fontSize: '18px', fontWeight: 700, color: '#212121', fontFamily: SYS_FONT, textAlign: 'center' }}>
+              Comprar Tokens
+            </h2>
+            <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#555', fontFamily: SYS_FONT, lineHeight: 1.6, textAlign: 'center' }}>
+              Cada token te habilita el documento por <strong>24 horas</strong>.
+            </p>
+
+            {/* Pack Selector */}
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+              <button onClick={() => setSelectedPack('1')} style={{
+                flex: 1, padding: '16px', borderRadius: '12px', cursor: 'pointer',
+                background: selectedPack === '1' ? '#362FC1' : '#f5f5f5',
+                border: selectedPack === '1' ? '2px solid #362FC1' : '2px solid #e0e0e0',
+                color: selectedPack === '1' ? '#fff' : '#333',
+                fontFamily: SYS_FONT, textAlign: 'center', transition: 'all 0.2s',
+              }}>
+                <div style={{ fontSize: '20px', fontWeight: 700 }}>1 Token</div>
+                <div style={{ fontSize: '14px', fontWeight: 600, marginTop: '4px' }}>$2.500</div>
+                <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '2px' }}>24hs de acceso</div>
+              </button>
+              <button onClick={() => setSelectedPack('5')} style={{
+                flex: 1, padding: '16px', borderRadius: '12px', cursor: 'pointer',
+                background: selectedPack === '5' ? '#362FC1' : '#f5f5f5',
+                border: selectedPack === '5' ? '2px solid #362FC1' : '2px solid #e0e0e0',
+                color: selectedPack === '5' ? '#fff' : '#333',
+                fontFamily: SYS_FONT, textAlign: 'center', transition: 'all 0.2s',
+              }}>
+                <div style={{ fontSize: '20px', fontWeight: 700 }}>5 Tokens</div>
+                <div style={{ fontSize: '14px', fontWeight: 600, marginTop: '4px' }}>$10.000</div>
+                <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '2px' }}>$2.000 c/u · Ahorrá $2.500</div>
+              </button>
+            </div>
+
+            {/* Mercado Pago Button */}
+            <button onClick={handleMpPayment} disabled={paymentLoading} style={{
+              width: '100%', padding: '14px', background: paymentLoading ? '#00a1e0' : '#009EE3',
+              color: '#fff', border: 'none', borderRadius: '12px', fontSize: '15px',
+              fontWeight: 600, cursor: paymentLoading ? 'not-allowed' : 'pointer',
+              fontFamily: SYS_FONT, display: 'flex', alignItems: 'center',
+              justifyContent: 'center', gap: '8px',
+              boxShadow: '0 4px 12px rgba(0, 158, 227, 0.3)',
+            }}>
+              {paymentLoading ? 'Redirigiendo...' : <><CreditCard size={18} /> Pagar con Mercado Pago</>}
+            </button>
+
+            {/* Verify pending payment */}
+            <button onClick={handleVerifyPayment} disabled={verifyingPayment} style={{
+              width: '100%', padding: '10px', marginTop: '8px', background: 'none',
+              color: '#009EE3', border: '1px solid #009EE3', borderRadius: '12px', fontSize: '13px',
+              fontWeight: 500, cursor: verifyingPayment ? 'not-allowed' : 'pointer',
+              fontFamily: SYS_FONT,
+            }}>
+              {verifyingPayment ? 'Verificando...' : 'Ya hice el pago, verificar'}
+            </button>
+
+
+
+            <div style={{ background: '#fff8e1', borderRadius: '8px', padding: '12px', marginTop: '16px', border: '1px solid #ffe082' }}>
+              <p style={{ margin: 0, fontSize: '12px', color: '#e65100', fontFamily: SYS_FONT, lineHeight: 1.5, textAlign: 'center' }}>
+                ⚠️ Los tokens no son transferibles a otras cuentas. Solo se pueden usar en la cuenta para la que fueron adquiridos.
               </p>
             </div>
           </div>
+        )}
 
-          <div style={{ background: '#fff8e1', borderRadius: '8px', padding: '12px', marginBottom: '16px', border: '1px solid #ffe082' }}>
-            <p style={{ margin: 0, fontSize: '12px', color: '#e65100', fontFamily: SYS_FONT, lineHeight: 1.5, textAlign: 'center' }}>
-              ⚠️ Los tokens no son transferibles a otras cuentas. Solo se pueden usar en la cuenta para la que fueron adquiridos.
-            </p>
-          </div>
-
-          <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#777', fontFamily: SYS_FONT, lineHeight: 1.5, textAlign: 'center' }}>
-            Enviá el comprobante al <strong>2617463862</strong> para que asignemos los tokens a tu cuenta.
-          </p>
-
-          {/* WhatsApp button */}
-          <a
-            href={`https://wa.me/542617463862?text=${whatsappMsg}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ textDecoration: 'none' }}
-          >
-            <button style={{
-              width: '100%', padding: '14px', background: '#25D366', color: '#fff', border: 'none',
-              borderRadius: '12px', fontSize: '15px', fontWeight: 600, cursor: 'pointer',
-              fontFamily: SYS_FONT, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-              boxShadow: '0 4px 12px rgba(37, 211, 102, 0.3)',
-            }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-              </svg>
-              Enviar comprobante por WhatsApp
-            </button>
-          </a>
-        </div>
-
-        {/* Register button */}
-        <button onClick={() => setView('register')} style={{
-          width: '100%', padding: '14px', background: '#362FC1', color: '#fff', border: 'none',
-          borderRadius: '12px', fontSize: '15px', fontWeight: 600, cursor: 'pointer',
-          fontFamily: SYS_FONT, boxShadow: '0 4px 12px rgba(54, 47, 193, 0.3)',
-        }}>
-          Registrarse
-        </button>
+        {/* Register button for non-logged-in users */}
+        {!user && (
+          <button onClick={() => setView('register')} style={{
+            width: '100%', padding: '14px', background: '#362FC1', color: '#fff', border: 'none',
+            borderRadius: '12px', fontSize: '15px', fontWeight: 600, cursor: 'pointer',
+            fontFamily: SYS_FONT, boxShadow: '0 4px 12px rgba(54, 47, 193, 0.3)',
+          }}>
+            Registrarse
+          </button>
+        )}
       </div>
 
       <BottomNavBar activeTab="tina" />
