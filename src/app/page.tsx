@@ -547,12 +547,30 @@ function EditMenu() {
     setFirma(null);
   };
 
-  const handleSave = () => {
-    updateDni({
-      nombre, apellido, dniNumero, domicilio, nacimiento,
-      fechaEmision, sexo, tramiteNumero, ejemplar, foto, firma,
-    });
-    setMenuOpen(false);
+  const handleSave = async () => {
+    if (!user?.id) return;
+    try {
+      const res = await fetch(`/api/dni/${user.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre, apellido, dniNumero, domicilio, nacimiento,
+          fechaEmision, sexo, tramiteNumero, ejemplar, foto, firma,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        console.error('Error al guardar:', err.error);
+        return;
+      }
+      updateDni({
+        nombre, apellido, dniNumero, domicilio, nacimiento,
+        fechaEmision, sexo, tramiteNumero, ejemplar, foto, firma,
+      });
+      setMenuOpen(false);
+    } catch (error) {
+      console.error('Error al guardar datos:', error);
+    }
   };
 
   if (!menuOpen) return null;
