@@ -48,6 +48,33 @@ const DNI_MID = '#4a6a8a';
 const MONTHS_ES = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
 const MONTHS_EN = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
+function resizeImage(base64: string, maxWidth = 800, maxHeight = 800): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width <= maxWidth && height <= maxHeight) {
+        resolve(base64);
+        return;
+      }
+      if (width > height) {
+        if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
+      } else {
+        if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { resolve(base64); return; }
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', 0.8));
+    };
+    img.onerror = () => resolve(base64);
+    img.src = base64;
+  });
+}
+
 function formatDniNumber(num: string): string {
   const digits = num.replace(/\D/g, '');
   return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
@@ -475,12 +502,13 @@ function EditMenu() {
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64 = reader.result as string;
+        const resized = await resizeImage(base64, 800, 800);
         setRemovingBg(true);
         try {
-          const cleaned = await removeImageBackground(base64);
+          const cleaned = await removeImageBackground(resized);
           setFoto(cleaned);
         } catch {
-          setFoto(base64);
+          setFoto(resized);
         } finally {
           setRemovingBg(false);
         }
@@ -589,6 +617,7 @@ function EditMenu() {
           <button onClick={() => setMenuOpen(false)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '22px' }}>✕</button>
         </div>
         <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
+          <DniPreviewCard nombre={nombre || 'Nombre'} apellido={apellido || 'Apellido'} dniNumero={dniNumero || '00000000'} sexo={sexo} nacimiento={nacimiento} fechaEmision={fechaEmision} foto={foto} firma={firma} tramiteNumero={tramiteNumero} domicilio={domicilio} />
           <div style={{ textAlign: 'center', marginBottom: '16px' }}>
             <input type="file" ref={fileInputRef} accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
             <button type="button" onClick={() => fileInputRef.current?.click()} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', margin: '0 auto' }}>
@@ -810,12 +839,13 @@ function RegisterView() {
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64 = reader.result as string;
+        const resized = await resizeImage(base64, 800, 800);
         setRemovingBg(true);
         try {
-          const cleaned = await removeImageBackground(base64);
+          const cleaned = await removeImageBackground(resized);
           setFoto(cleaned);
         } catch {
-          setFoto(base64);
+          setFoto(resized);
         } finally {
           setRemovingBg(false);
         }
@@ -962,27 +992,40 @@ function RegField({ label, value, onChange, type = 'text' }: { label: string; va
 }
 
 // ========================================
-// DNI PREVIEW CARD (used in registration)
-// Pixel-perfect copy of DniViewerView's front card
-// Same container, same template, same positioning — only values differ
+// DNI PREVIEW CARD (used in registration and edit menu)
+// Shows both front and back with flip-to-interact (like DniViewerView)
 // ========================================
 function DniPreviewCard({ nombre, apellido, dniNumero, sexo, nacimiento, fechaEmision, foto, firma, tramiteNumero, domicilio }: {
   nombre: string; apellido: string; dniNumero: string; sexo: string; nacimiento: string; fechaEmision: string; foto: string | null; firma: string | null; tramiteNumero?: string; domicilio?: string;
 }) {
   const DNI_FONT = "Arial, sans-serif";
   const [showFront, setShowFront] = useState(true);
-  const scale = showFront ? 'rotateY(0)' : 'rotateY(180deg)';
+  const [isFlipping, setIsFlipping] = useState(false);
+
+  const toggleSide = () => {
+    setIsFlipping(true);
+    setTimeout(() => {
+      setShowFront(prev => !prev);
+      setIsFlipping(false);
+    }, 200);
+  };
+
+  const touchStartX = useRef(0);
+  const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const diff = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(diff) > 50) toggleSide();
+  };
 
   return (
-    <div style={{ cursor: 'pointer', perspective: '1000px', marginBottom: '8px' }} onClick={() => setShowFront(!showFront)}>
+    <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onClick={toggleSide} style={{ cursor: 'pointer', perspective: '1000px', marginBottom: '8px' }}>
       <div style={{
-        transition: 'transform 0.3s ease',
-        transform: scale,
-        transformStyle: 'preserve-3d',
+        transition: 'transform 0.4s ease, opacity 0.2s ease',
+        transform: isFlipping ? 'rotateY(90deg) scale(0.95)' : 'rotateY(0) scale(1)',
+        opacity: isFlipping ? 0 : 1,
       }}>
-        <div className="DNI_imgs" style={{ aspectRatio: '1318 / 833', position: 'relative', width: '100%', backfaceVisibility: 'hidden', zIndex: 2 }}>
-          {showFront && (
-            <>
+        {showFront && (
+          <div className="DNI_imgs" style={{ aspectRatio: '1318 / 833', position: 'relative', width: '100%', backfaceVisibility: 'hidden', zIndex: 2 }}>
             <img className="DNI_IMG" src="/arg_front_new_bg.webp" alt="dni_img" style={{ objectFit: 'contain', width: '100%' }} />
             <div style={{ position: 'absolute', left: '7.46%', bottom: '26.22%', width: '21.62%', height: '43.19%' }}>
               {foto ? (
@@ -1029,13 +1072,13 @@ function DniPreviewCard({ nombre, apellido, dniNumero, sexo, nacimiento, fechaEm
               <img src="/barcode_relleno_final.png" alt="Codigo de barras" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
             <div style={{ position: 'absolute', bottom: '2%', left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: showFront ? '#1a3a5c' : '#a0c4e0', transition: 'background-color 0.3s ease' }} />
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: showFront ? '#a0c4e0' : '#1a3a5c', transition: 'background-color 0.3s ease' }} />
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#1a3a5c', transition: 'background-color 0.3s ease' }} />
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#a0c4e0', transition: 'background-color 0.3s ease' }} />
             </div>
-            </>
-          )}
-          {!showFront && (
-            <>
+          </div>
+        )}
+        {!showFront && (
+          <div className="DNI_back" style={{ aspectRatio: '1320 / 833', position: 'relative', width: '100%', backfaceVisibility: 'hidden', zIndex: 1 }}>
             <img src="/dorso.png" alt="back dni" style={{ objectFit: 'contain', width: '100%' }} />
             <div style={{ position: 'absolute', top: '5%', left: '2%', color: '#000', fontFamily: DNI_FONT, fontSize: '11px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
               <span>DOMICILIO: </span>
@@ -1046,13 +1089,13 @@ function DniPreviewCard({ nombre, apellido, dniNumero, sexo, nacimiento, fechaEm
               <span>ARGENTINA</span>
             </div>
             <div style={{ position: 'absolute', bottom: '2%', left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: showFront ? '#1a3a5c' : '#a0c4e0', transition: 'background-color 0.3s ease' }} />
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: showFront ? '#a0c4e0' : '#1a3a5c', transition: 'background-color 0.3s ease' }} />
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#a0c4e0', transition: 'background-color 0.3s ease' }} />
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#1a3a5c', transition: 'background-color 0.3s ease' }} />
             </div>
-            </>
-          )}
+          </div>
+        )}
       </div>
-    </div>
+      <p style={{ margin: '4px 0 0', fontSize: '10px', color: '#999', textAlign: 'center', fontFamily: SYS_FONT }}>Tocá para ver el dorso</p>
     </div>
   );
 }
@@ -2510,6 +2553,19 @@ function TinaView() {
 
       if (diff <= 0) {
         setRemainingTime('Expirado')
+        if (user?.id && user.isActive) {
+          fetch('/api/tokens/deactivate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.id }),
+          }).then(res => {
+            if (res.ok) return res.json()
+          }).then(data => {
+            if (data) {
+              setUser({ ...user, isActive: false, activatedAt: null, tokens: data.tokensLeft })
+            }
+          }).catch(() => {})
+        }
         return
       }
 
