@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import FormData from 'form-data'
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,10 +27,17 @@ export async function POST(request: NextRequest) {
     }
     const buffer = Buffer.from(base64Data, 'base64')
 
-    const FormData = (await import('form-data')).default
     const form = new FormData()
     form.append('image', buffer, { filename: 'photo.png', contentType: 'image/png' })
     form.append('format', 'png')
+
+    const chunks: Buffer[] = []
+    await new Promise<void>((resolve, reject) => {
+      form.on('data', (chunk: Buffer) => chunks.push(chunk))
+      form.on('end', () => resolve())
+      form.on('error', reject)
+    })
+    const formBody = Buffer.concat(chunks)
 
     const response = await fetch('https://api.rembg.com/rmbg', {
       method: 'POST',
@@ -37,7 +45,7 @@ export async function POST(request: NextRequest) {
         'x-api-key': apiKey,
         ...form.getHeaders(),
       },
-      body: form,
+      body: formBody,
     })
 
     if (!response.ok) {
