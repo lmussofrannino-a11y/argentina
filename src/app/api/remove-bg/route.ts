@@ -11,11 +11,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const apiKey = process.env.REMBG_API_KEY
+    const apiKey = process.env.REMOVE_BG_API_KEY
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'API key de rembg no configurada' },
+        { error: 'API key de remove.bg no configurada' },
         { status: 500 }
       )
     }
@@ -25,13 +25,12 @@ export async function POST(request: NextRequest) {
 
     const formData = new FormData()
     const blob = new Blob([buffer], { type: 'image/png' })
-    formData.append('image', blob, 'photo.png')
-    formData.append('format', 'png')
+    formData.append('image_file', blob, 'photo.png')
 
-    const response = await fetch('https://api.rembg.com/rmbg', {
+    const response = await fetch('https://api.remove.bg/v1.0/removebg', {
       method: 'POST',
       headers: {
-        'x-api-key': apiKey,
+        'X-Api-Key': apiKey,
       },
       body: formData,
     })
@@ -39,7 +38,7 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text()
       return NextResponse.json(
-        { error: `rembg API error ${response.status}: ${errorText}` },
+        { error: `remove.bg API error ${response.status}: ${errorText}` },
         { status: response.status }
       )
     }
