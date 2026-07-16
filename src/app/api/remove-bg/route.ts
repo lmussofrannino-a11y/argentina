@@ -52,8 +52,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ image: dataUrl }, { status: 200 })
   } catch (error) {
     console.error('Error en remove-bg API:', error)
+    const message = error instanceof Error ? error.message : 'Error interno del servidor'
     return NextResponse.json(
-      { error: 'Error interno del servidor' },
+      { error: message },
       { status: 500 }
     )
   }
