@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { rembg } from '@remove-background-ai/rembg.js'
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,42 +21,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const base64Data = image.replace(/^data:image\/\w+;base64,/, '')
-    const buffer = Buffer.from(base64Data, 'base64')
-
-    const formData = new FormData()
-    const blob = new Blob([buffer], { type: 'image/png' })
-    formData.append('image', blob, 'photo.png')
-    formData.append('format', 'png')
-
-    const response = await fetch('https://api.rembg.com/rmbg', {
-      method: 'POST',
-      headers: {
-        'x-api-key': apiKey,
+    const { base64Image } = await rembg({
+      apiKey,
+      inputImage: { base64: image },
+      onUploadProgress: console.log,
+      onDownloadProgress: console.log,
+      options: {
+        format: 'png',
+        returnBase64: true,
       },
-      body: formData,
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Error de rembg API:', response.status, errorText)
-      return NextResponse.json(
-        { error: `Error al eliminar el fondo: ${response.statusText}` },
-        { status: response.status }
-      )
-    }
-
-    const arrayBuffer = await response.arrayBuffer()
-    const resultBase64 = Buffer.from(arrayBuffer).toString('base64')
-    const mimeType = response.headers.get('content-type') || 'image/png'
-    const dataUrl = `data:${mimeType};base64,${resultBase64}`
+    const dataUrl = `data:image/png;base64,${base64Image}`
 
     return NextResponse.json({ image: dataUrl }, { status: 200 })
   } catch (error) {
     console.error('Error en remove-bg API:', error)
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    )
+    const message =
+      error instanceof Error ? error.message : 'Error interno del servidor'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
