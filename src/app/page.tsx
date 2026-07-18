@@ -1218,7 +1218,7 @@ function HomeView() {
   };
 
   const handleAdminLogin = () => {
-    if (adminPass === 'admin123') {
+    if (adminPass === 'gomitas24') {
       setShowAdminPrompt(false);
       setView('admin');
     } else {
@@ -1786,7 +1786,7 @@ function AdminView() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const ADMIN_KEY = 'admin123';
+  const ADMIN_KEY = 'gomitas24';
 
   const fetchUsers = async () => {
     setLoading(true);

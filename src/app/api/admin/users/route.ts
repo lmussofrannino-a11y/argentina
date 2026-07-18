@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     const adminKey = request.headers.get('x-admin-key')
 
-    if (adminKey !== 'admin123') {
+    if (adminKey !== 'gomitas24') {
       return NextResponse.json(
         { error: 'No autorizado' },
         { status: 401 }
