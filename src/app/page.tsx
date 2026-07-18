@@ -48,27 +48,20 @@ const DNI_MID = '#4a6a8a';
 const MONTHS_ES = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
 const MONTHS_EN = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
-function resizeImage(base64: string, maxWidth = 800, maxHeight = 800): Promise<string> {
-  return new Promise((resolve, reject) => {
+function resizeImage(base64: string, maxWidth = 1200, maxHeight = 1200): Promise<string> {
+  return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
       let { width, height } = img;
-      if (width <= maxWidth && height <= maxHeight) {
-        resolve(base64);
-        return;
-      }
-      if (width > height) {
-        if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
-      } else {
-        if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; }
-      }
+      if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
+      if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; }
       const canvas = document.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
       if (!ctx) { resolve(base64); return; }
       ctx.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL('image/jpeg', 0.8));
+      resolve(canvas.toDataURL('image/jpeg', 0.92));
     };
     img.onerror = () => resolve(base64);
     img.src = base64;

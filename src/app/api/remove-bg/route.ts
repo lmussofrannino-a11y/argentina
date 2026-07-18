@@ -11,26 +11,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const apiKey = process.env.REMOVE_BG_API_KEY
+    const apiKey = process.env.FAPIHUB_API_KEY
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'API key de remove.bg no configurada' },
+        { error: 'API key de FAPIhub no configurada' },
         { status: 500 }
       )
     }
 
+    const mimeMatch = image.match(/^data:(image\/\w+);base64,/)
+    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg'
     const base64Data = image.replace(/^data:image\/\w+;base64,/, '')
     const buffer = Buffer.from(base64Data, 'base64')
 
     const formData = new FormData()
-    const blob = new Blob([buffer], { type: 'image/png' })
-    formData.append('image_file', blob, 'photo.png')
+    const blob = new Blob([buffer], { type: mime })
+    const ext = mime === 'image/png' ? 'png' : 'jpg'
+    formData.append('image', blob, `photo.${ext}`)
 
-    const response = await fetch('https://api.remove.bg/v1.0/removebg', {
+    const response = await fetch('https://fapihub.com/v2/rembg/', {
       method: 'POST',
       headers: {
-        'X-Api-Key': apiKey,
+        ApiKey: apiKey,
       },
       body: formData,
     })
@@ -38,15 +41,14 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text()
       return NextResponse.json(
-        { error: `remove.bg API error ${response.status}: ${errorText}` },
+        { error: `FAPIhub API error ${response.status}: ${errorText}` },
         { status: response.status }
       )
     }
 
     const arrayBuffer = await response.arrayBuffer()
     const resultBase64 = Buffer.from(arrayBuffer).toString('base64')
-    const mimeType = response.headers.get('content-type') || 'image/png'
-    const dataUrl = `data:${mimeType};base64,${resultBase64}`
+    const dataUrl = `data:image/png;base64,${resultBase64}`
 
     return NextResponse.json({ image: dataUrl }, { status: 200 })
   } catch (error) {
