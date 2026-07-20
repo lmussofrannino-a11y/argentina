@@ -3,15 +3,6 @@ import { db } from '@/lib/db'
 
 const ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN!
 
-async function addTokensForUser(userId: string, quantity: number) {
-  const user = await db.user.update({
-    where: { id: userId },
-    data: { tokens: { increment: quantity } },
-  })
-  console.log(`Tokens added: +${quantity} to user ${userId}. Total: ${user.tokens}`)
-  return user
-}
-
 async function verifyPayment(paymentId: string) {
   const res = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
     headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` },
@@ -27,11 +18,21 @@ export async function POST(req: NextRequest) {
     // Handle webhook notification from Mercado Pago
     const { type, data } = body
     if (type === 'payment' && data?.id) {
-      const payment = await verifyPayment(data.id)
-      if (payment && payment.status === 'approved') {
-        const userId = payment.metadata?.userId as string || payment.external_reference as string
-        const quantity = (payment.metadata?.quantity as number) || 1
-        if (userId) await addTokensForUser(userId, quantity)
+      const paymentId = String(data.id)
+      const existing = await db.processedPayment.findUnique({ where: { id: paymentId } })
+      if (!existing) {
+        const payment = await verifyPayment(paymentId)
+        if (payment && payment.status === 'approved') {
+          const userId = payment.metadata?.userId as string || payment.external_reference as string
+          const quantity = (payment.metadata?.quantity as number) || 1
+          if (userId) {
+            await db.user.update({
+              where: { id: userId },
+              data: { tokens: { increment: quantity } },
+            })
+            await db.processedPayment.create({ data: { id: paymentId, userId } })
+          }
+        }
       }
       return NextResponse.json({ received: true })
     }
@@ -42,7 +43,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'userId es requerido' }, { status: 400 })
     }
 
-    // Search payments by external_reference = userId
     const searchRes = await fetch(
       `https://api.mercadopago.com/v1/payments/search?external_reference=${userId}&sort=date_created&criteria=desc&limit=1`,
       { headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` } },
@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
     }
 
     const lastPayment = searchData.results[0]
+    const paymentId = String(lastPayment.id)
 
     if (lastPayment.status !== 'approved') {
       return NextResponse.json({
@@ -65,13 +66,27 @@ export async function POST(req: NextRequest) {
 
     const quantity = (lastPayment.metadata?.quantity as number) || 1
 
-    // Check if tokens were already added (idempotency)
     const user = await db.user.findUnique({ where: { id: userId }, select: { tokens: true } })
     if (!user) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
 
-    const updated = await addTokensForUser(userId, quantity)
+    const alreadyProcessed = await db.processedPayment.findUnique({ where: { id: paymentId } })
+    if (alreadyProcessed) {
+      return NextResponse.json({
+        success: true,
+        tokens: user.tokens,
+        quantity,
+        message: 'Este pago ya fue acreditado',
+      })
+    }
+
+    const updated = await db.user.update({
+      where: { id: userId },
+      data: { tokens: { increment: quantity } },
+    })
+
+    await db.processedPayment.create({ data: { id: paymentId, userId } })
 
     return NextResponse.json({
       success: true,

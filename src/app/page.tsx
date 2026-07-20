@@ -1856,6 +1856,36 @@ function AdminView() {
     }
   };
 
+  const handleRemoveTokens = async (userId: string) => {
+    const amount = parseInt(tokenInputs[userId] || '0', 10);
+    if (!amount || amount <= 0) return;
+    setActivating(userId);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch('/api/admin/activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': ADMIN_KEY },
+        body: JSON.stringify({ userId, addTokens: -amount }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Error al quitar tokens'); return; }
+      setSuccess(`Se quitaron ${amount} token(s) ✓`);
+      setTokenInputs(prev => ({ ...prev, [userId]: '' }));
+
+      if (user && userId === user.id && data.user) {
+        setUser(data.user);
+      }
+
+      await fetchUsers();
+    } catch {
+      setError('Error de conexión');
+    } finally {
+      setActivating(null);
+      setTimeout(() => setSuccess(null), 3000);
+    }
+  };
+
   const pendingUsers = users?.filter(u => !u.isActive) || [];
   const activeUsers = users?.filter(u => u.isActive) || [];
 
@@ -1930,6 +1960,18 @@ function AdminView() {
                             >
                               + Tokens
                             </button>
+                            <button
+                              onClick={() => handleRemoveTokens(u.id)}
+                              disabled={activating === u.id || !tokenInputs[u.id] || parseInt(tokenInputs[u.id] || '0') <= 0}
+                              style={{
+                                background: '#ef5350',
+                                border: 'none', borderRadius: '6px', color: '#fff',
+                                padding: '4px 10px', fontSize: '12px', fontWeight: 600,
+                                cursor: 'pointer', fontFamily: SYS_FONT,
+                              }}
+                            >
+                              - Tokens
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -1982,6 +2024,18 @@ function AdminView() {
                               }}
                             >
                               + Tokens
+                            </button>
+                            <button
+                              onClick={() => handleRemoveTokens(u.id)}
+                              disabled={activating === u.id || !tokenInputs[u.id] || parseInt(tokenInputs[u.id] || '0') <= 0}
+                              style={{
+                                background: '#ef5350',
+                                border: 'none', borderRadius: '6px', color: '#fff',
+                                padding: '4px 10px', fontSize: '12px', fontWeight: 600,
+                                cursor: 'pointer', fontFamily: SYS_FONT,
+                              }}
+                            >
+                              - Tokens
                             </button>
                           </div>
                         </div>

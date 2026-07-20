@@ -26,17 +26,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
 
-    // If adding tokens
-    if (addTokens && typeof addTokens === 'number' && addTokens > 0) {
+    // If adding or removing tokens
+    if (addTokens && typeof addTokens === 'number' && addTokens !== 0) {
+      const newTokens = Math.max(0, existingUser.tokens + addTokens)
       const updated = await db.user.update({
         where: { id: userId },
-        data: { tokens: existingUser.tokens + addTokens },
+        data: { tokens: newTokens },
         include: { dni: true },
       })
       const { password: _, ...userWithoutPassword } = updated
+      const action = addTokens > 0 ? 'agregaron' : 'quitaron'
       return NextResponse.json(
         {
-          message: `Se agregaron ${addTokens} token(s). Total: ${updated.tokens}`,
+          message: `Se ${action} ${Math.abs(addTokens)} token(s). Total: ${updated.tokens}`,
           user: userWithoutPassword,
         },
         { status: 200 }
