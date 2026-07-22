@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
     const user = await db.user.findUnique({
       where: { id: userId },
-      select: { isActive: true },
+      select: { tokens: true },
     })
 
     if (!user) {
@@ -24,20 +24,23 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const updated = await db.user.update({
+    // Always deactivate, but only decrement if there are tokens
+    await db.user.update({
       where: { id: userId },
       data: {
         isActive: false,
         activatedAt: null,
-        tokens: { decrement: 1 },
+        tokens: user.tokens > 0 ? { decrement: 1 } : undefined,
       },
     })
+
+    const tokensLeft = Math.max(0, user.tokens - 1)
 
     return NextResponse.json({
       success: true,
       message: 'Token expirado. Documento desactivado.',
       isActive: false,
-      tokensLeft: updated.tokens,
+      tokensLeft,
     })
   } catch (error) {
     console.error('Error deactivating token:', error)

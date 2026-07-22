@@ -14,27 +14,36 @@ export async function consumeTokenIfExpired(userId: string): Promise<{ isActive:
   if (isActive && activatedAt) {
     const hoursSinceActivation = (Date.now() - new Date(activatedAt).getTime()) / (1000 * 60 * 60)
     if (hoursSinceActivation >= 24) {
-      isActive = false
-      activatedAt = null
-      // Decrement the used token (only if we're expiring)
-      if (tokens > 0) tokens -= 1
       await db.user.update({
         where: { id: userId },
-        data: { isActive: false, activatedAt: null, tokens },
+        data: {
+          isActive: false,
+          activatedAt: null,
+          tokens: tokens > 0 ? { decrement: 1 } : undefined,
+        },
       })
+      isActive = false
+      activatedAt = null
+      if (tokens > 0) tokens -= 1
     }
   }
 
-  // If not active but has tokens, activate one
+  // If not active but has tokens, activate one atomically
   if (!isActive && tokens > 0) {
-    isActive = true
-    activatedAt = new Date()
-    tokens -= 1
-    await db.user.update({
-      where: { id: userId },
-      data: { isActive: true, activatedAt, tokens },
+    const result = await db.user.updateMany({
+      where: { id: userId, tokens: { gt: 0 } },
+      data: {
+        isActive: true,
+        activatedAt: new Date(),
+        tokens: { decrement: 1 },
+      },
     })
-    return { isActive: true, tokensLeft: tokens, expired: false }
+    if (result.count > 0) {
+      tokens -= 1
+      return { isActive: true, tokensLeft: tokens, expired: false }
+    }
+    // Race lost - tokens were consumed by another request
+    return { isActive: false, tokensLeft: 0, expired: true }
   }
 
   return { isActive, tokensLeft: tokens, expired: !isActive && tokens === 0 }
