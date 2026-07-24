@@ -360,7 +360,7 @@ function MercosurLogo({ size = 20 }: { size?: number }) {
 // MAIN APP COMPONENT
 // ========================================
 export default function MiArgentinaApp() {
-  const { view, _hasHydrated } = useAppStore();
+  const { view, _hasHydrated, user, setUser, setView } = useAppStore();
 
   useEffect(() => {
     const hide = () => {
@@ -372,6 +372,32 @@ export default function MiArgentinaApp() {
     obs.observe(document.body, { childList: true, subtree: true });
     return () => obs.disconnect();
   }, []);
+
+  // Global expiry timer — runs regardless of which view the user is on
+  useEffect(() => {
+    if (!user?.id || !user.isActive || !user.activatedAt) return;
+
+    const activatedAt = new Date(user.activatedAt);
+
+    const check = () => {
+      const diff = Date.now() - activatedAt.getTime();
+      if (diff >= 24 * 60 * 60 * 1000) {
+        fetch('/api/tokens/deactivate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id }),
+        }).then(res => res.ok ? res.json() : null).then(data => {
+          if (data) {
+            setUser({ ...user, isActive: false, activatedAt: null, tokens: data.tokensLeft });
+          }
+        }).catch(() => {});
+      }
+    };
+
+    check();
+    const interval = setInterval(check, 1000);
+    return () => clearInterval(interval);
+  }, [user?.id, user?.isActive, user?.activatedAt]);
 
   // Handle Mercado Pago redirect after payment
   useEffect(() => {
@@ -2541,7 +2567,6 @@ function TinaView() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [remainingTime, setRemainingTime] = useState<string | null>(null);
-  const [activatedAtDate, setActivatedAtDate] = useState<Date | null>(null);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
 
   // Refresh user data on mount
@@ -2554,65 +2579,22 @@ function TinaView() {
     }).catch(() => {});
   }, []);
 
-  // Calculate remaining time
-  useEffect(() => {
-    if (!user?.isActive) {
-      setRemainingTime(null);
-      setActivatedAtDate(null);
-      return
-    }
-
-    // We need activatedAt from the user - fetch the latest if not available
-    const fetchUser = async () => {
-      if (!user.id) return
-      try {
-        const res = await fetch(`/api/user/${user.id}`)
-        if (res.ok) {
-          const data = await res.json()
-          if (data.user) {
-            setUser(data.user)
-            if (data.user.activatedAt) {
-              setActivatedAtDate(new Date(data.user.activatedAt))
-            }
-          }
-        }
-      } catch {}
-    }
-
-    if (!user.activatedAt) {
-      fetchUser()
-    } else {
-      setActivatedAtDate(new Date(user.activatedAt))
-    }
-  }, [user?.isActive, user?.activatedAt])
-
   // Update remaining time every second
   useEffect(() => {
-    if (!activatedAtDate) {
+    if (!user?.isActive || !user?.activatedAt) {
       setRemainingTime(null)
       return
     }
 
+    const activatedAt = new Date(user.activatedAt)
+
     const update = () => {
       const now = Date.now()
-      const end = activatedAtDate.getTime() + 24 * 60 * 60 * 1000
+      const end = activatedAt.getTime() + 24 * 60 * 60 * 1000
       const diff = end - now
 
       if (diff <= 0) {
         setRemainingTime('Expirado')
-        if (user?.id && user.isActive) {
-          fetch('/api/tokens/deactivate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: user.id }),
-          }).then(res => {
-            if (res.ok) return res.json()
-          }).then(data => {
-            if (data) {
-              setUser({ ...user, isActive: false, activatedAt: null, tokens: data.tokensLeft })
-            }
-          }).catch(() => {})
-        }
         return
       }
 
@@ -2625,7 +2607,7 @@ function TinaView() {
     update()
     const interval = setInterval(update, 1000)
     return () => clearInterval(interval)
-  }, [activatedAtDate])
+  }, [user?.isActive, user?.activatedAt])
 
   const handleMpPayment = async () => {
     if (!user?.id || !user?.email) {

@@ -10,7 +10,7 @@ export async function consumeTokenIfExpired(userId: string): Promise<{ isActive:
 
   let { isActive, activatedAt, tokens } = user
 
-  // If currently active and 24h have passed, expire this token
+  // If currently active and 24h have passed, expire this token (no decrement — token was consumed at activation)
   if (isActive && activatedAt) {
     const hoursSinceActivation = (Date.now() - new Date(activatedAt).getTime()) / (1000 * 60 * 60)
     if (hoursSinceActivation >= 24) {
@@ -19,12 +19,10 @@ export async function consumeTokenIfExpired(userId: string): Promise<{ isActive:
         data: {
           isActive: false,
           activatedAt: null,
-          tokens: tokens > 0 ? { decrement: 1 } : undefined,
         },
       })
       isActive = false
       activatedAt = null
-      if (tokens > 0) tokens -= 1
     }
   }
 
