@@ -28,6 +28,14 @@ export async function POST(request: NextRequest) {
 
     // If adding or removing tokens
     if (addTokens && typeof addTokens === 'number' && addTokens !== 0) {
+      // Validate that we're not removing more tokens than available
+      if (addTokens < 0 && Math.abs(addTokens) > existingUser.tokens) {
+        return NextResponse.json(
+          { error: 'No se pueden quitar más tokens de los que tiene el usuario' },
+          { status: 400 }
+        )
+      }
+      
       const newTokens = Math.max(0, existingUser.tokens + addTokens)
       const updated = await db.user.update({
         where: { id: userId },

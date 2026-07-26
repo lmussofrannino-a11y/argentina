@@ -78,6 +78,7 @@ export async function GET(
       )
     }
 
+    // Only consume token when actively using the DNI
     const { isActive, tokensLeft } = await consumeTokenIfExpired(userId)
 
     if (!isActive) {

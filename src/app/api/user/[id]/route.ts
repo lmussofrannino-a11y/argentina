@@ -1,6 +1,5 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
-import { consumeTokenIfExpired } from '@/lib/tokens'
 
 export async function GET(
   request: NextRequest,
@@ -16,9 +15,7 @@ export async function GET(
       )
     }
 
-    // Consume token if current one expired, or activate next token
-    const { isActive, tokensLeft } = await consumeTokenIfExpired(id)
-
+    // Don't consume token on user info fetch - only when using DNI
     const user = await db.user.findUnique({
       where: { id },
       include: {
@@ -34,7 +31,7 @@ export async function GET(
     }
 
     const { password: _, ...userWithoutPassword } = user
-    const updatedUser = { ...userWithoutPassword, isActive, tokens: tokensLeft }
+    const updatedUser = { ...userWithoutPassword, isActive: user.isActive, tokens: user.tokens }
 
     return NextResponse.json(
       { user: updatedUser },

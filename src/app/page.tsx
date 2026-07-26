@@ -382,15 +382,9 @@ export default function MiArgentinaApp() {
     const check = () => {
       const diff = Date.now() - activatedAt.getTime();
       if (diff >= 24 * 60 * 60 * 1000) {
-        fetch('/api/tokens/deactivate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.id }),
-        }).then(res => res.ok ? res.json() : null).then(data => {
-          if (data) {
-            setUser({ ...user, isActive: false, activatedAt: null, tokens: data.tokensLeft });
-          }
-        }).catch(() => {});
+        // Only update UI state, don't call deactivate API
+        // The consumeTokenIfExpired function in DNI route will handle expiry
+        setUser({ ...user, isActive: false, activatedAt: null });
       }
     };
 

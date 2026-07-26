@@ -1,6 +1,5 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
-import { consumeTokenIfExpired } from '@/lib/tokens'
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,13 +42,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Consume token if current one expired, or activate next token
-    const { isActive, tokensLeft } = await consumeTokenIfExpired(user.id)
-
+    // Don't consume token on login - only when using DNI
     const { password: _, ...userWithoutPassword } = user
-    const updatedUser = { ...userWithoutPassword, isActive, tokens: tokensLeft }
+    const updatedUser = { ...userWithoutPassword, isActive: user.isActive, tokens: user.tokens }
 
-    if (!isActive && tokensLeft === 0) {
+    if (!user.isActive && user.tokens === 0) {
       return NextResponse.json(
         {
           message: 'Tu cuenta no tiene tokens disponibles. Contactá al administrador.',
@@ -59,7 +56,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!isActive) {
+    if (!user.isActive) {
       return NextResponse.json(
         {
           message: 'Tu cuenta está pendiente de activación',
