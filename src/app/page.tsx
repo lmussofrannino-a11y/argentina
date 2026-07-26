@@ -14,7 +14,6 @@ import {
   Briefcase,
   DollarSign,
   ClipboardList,
-  Calendar,
   Users,
   Menu,
   X,
@@ -1255,8 +1254,8 @@ function HomeView() {
       <StatusBar />
       <HeaderBar onLogoTap={handleLogoTap} onMenuClick={() => useAppStore.getState().setMenuOpen(true)} />
 
-      {/* Greeting section - scrolls away, has rounded bottom */}
-      <div style={{ background: '#362FC1', textAlign: 'center', paddingBottom: '24px', borderBottomLeftRadius: '30px', borderBottomRightRadius: '30px', position: 'relative' }}>
+      {/* Greeting section - taller violet bar so credentials card can overlap its lower portion */}
+      <div style={{ background: '#362FC1', textAlign: 'center', paddingTop: '3.5%', paddingBottom: '6%', borderBottomLeftRadius: '30px', borderBottomRightRadius: '30px', position: 'relative', zIndex: 1 }}>
         <h1 style={{ fontSize: '20px', fontWeight: 400, color: '#fff', fontFamily: SYS_FONT, margin: 0, padding: '0 16px' }}>¡Hola {nombre}!</h1>
       </div>
 
@@ -1273,13 +1272,8 @@ function HomeView() {
         </div>
       )}
 
-      {/* Mundial Card - 1077×298 @3x → 359×99px display */}
-      <div style={{ margin: '12px 12px 0' }}>
-        <img src="/card-mundial.png" alt="Viví el Mundial 2026" style={{ width: '100%', aspectRatio: '1077 / 298', borderRadius: '10px', objectFit: 'cover', display: 'block' }} />
-      </div>
-
-      {/* Credentials Card Image */}
-      <div style={{ margin: '8px 12px 0', borderRadius: '10px', overflow: 'hidden' }}>
+      {/* Credentials Card Image - pulled up with negative margin to overlap the violet header's rounded bottom */}
+      <div style={{ margin: '-4% 12px 0', borderRadius: '10px', overflow: 'hidden', position: 'relative', zIndex: 2 }}>
         <img src="/credenciales.png" alt="Todas tus credenciales están al día" style={{ width: '100%', aspectRatio: '1077 / 298', objectFit: 'cover', display: 'block' }} />
       </div>
 
