@@ -1792,8 +1792,22 @@ function AdminView() {
   const [tokenInputs, setTokenInputs] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   const ADMIN_KEY = 'gomitas24';
+
+  const filterUsers = (list: { id: string; email: string; isActive: boolean; tokens: number; createdAt: string; dni: { nombre: string; apellido: string; dniNumero: string } | null }[] | null | undefined) => {
+    if (!list) return [];
+    if (!search.trim()) return list;
+    const q = search.toLowerCase().trim();
+    return list.filter(u => {
+      const nombre = (u.dni?.nombre || '').toLowerCase();
+      const apellido = (u.dni?.apellido || '').toLowerCase();
+      const email = u.email.toLowerCase();
+      const dni = (u.dni?.dniNumero || '').toLowerCase();
+      return nombre.includes(q) || apellido.includes(q) || email.includes(q) || dni.includes(q);
+    });
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -1900,8 +1914,8 @@ function AdminView() {
     }
   };
 
-  const pendingUsers = users?.filter(u => !u.isActive) || [];
-  const activeUsers = users?.filter(u => u.isActive) || [];
+  const pendingUsers = filterUsers(users?.filter(u => !u.isActive)) || [];
+  const activeUsers = filterUsers(users?.filter(u => u.isActive)) || [];
 
   return (
     <div style={{ backgroundColor: '#f0f0f0', minHeight: '100vh' }}>
@@ -1920,6 +1934,24 @@ function AdminView() {
         {success && (
           <div style={{ background: '#e8f5e9', borderRadius: '8px', padding: '12px 16px', marginBottom: '12px', border: '1px solid #a5d6a7' }}>
             <p style={{ margin: 0, fontSize: '14px', color: '#2e7d32', fontFamily: SYS_FONT }}>{success}</p>
+          </div>
+        )}
+
+        {!loading && (
+          <div style={{ position: 'relative', marginBottom: '16px' }}>
+            <Search size={16} color="#9e9e9e" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+            <input
+              type="text"
+              placeholder="Buscar por nombre, email o DNI..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ width: '100%', padding: '10px 12px 10px 34px', border: '2px solid #e0e0e0', borderRadius: '10px', fontSize: '14px', fontFamily: SYS_FONT, outline: 'none', boxSizing: 'border-box', background: '#fff' }}
+            />
+            {search && (
+              <button onClick={() => setSearch('')} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#9e9e9e', cursor: 'pointer', padding: '4px' }}>
+                <X size={16} />
+              </button>
+            )}
           </div>
         )}
 
