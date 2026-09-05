@@ -2639,7 +2639,7 @@ function TinaView() {
     setMessage(null)
     try {
       const quantity = selectedPack === '1' ? 1 : 5
-      const unitPrice = selectedPack === '1' ? 2500 : 10000
+      const unitPrice = selectedPack === '1' ? 3000 : 12000
       const title = selectedPack === '1' ? '1 Token miArgentina' : '5 Tokens miArgentina'
 
       const res = await fetch('/api/mercadopago/create-preference', {
@@ -2831,7 +2831,7 @@ function TinaView() {
                 fontFamily: SYS_FONT, textAlign: 'center', transition: 'all 0.2s',
               }}>
                 <div style={{ fontSize: '20px', fontWeight: 700 }}>1 Token</div>
-                <div style={{ fontSize: '14px', fontWeight: 600, marginTop: '4px' }}>$2.500</div>
+                <div style={{ fontSize: '14px', fontWeight: 600, marginTop: '4px' }}>$3.000</div>
                 <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '2px' }}>24hs de acceso</div>
               </button>
               <button onClick={() => setSelectedPack('5')} style={{
@@ -2842,8 +2842,8 @@ function TinaView() {
                 fontFamily: SYS_FONT, textAlign: 'center', transition: 'all 0.2s',
               }}>
                 <div style={{ fontSize: '20px', fontWeight: 700 }}>5 Tokens</div>
-                <div style={{ fontSize: '14px', fontWeight: 600, marginTop: '4px' }}>$10.000</div>
-                <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '2px' }}>$2.000 c/u · Ahorrá $2.500</div>
+                <div style={{ fontSize: '14px', fontWeight: 600, marginTop: '4px' }}>$12.000</div>
+                <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '2px' }}>$2.400 c/u · Ahorrá $3.000</div>
               </button>
             </div>
 
