@@ -1081,7 +1081,7 @@ function DniPreviewCard({ nombre, apellido, dniNumero, sexo, nacimiento, fechaEm
             <div style={{ position: 'absolute', top: '88.67%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '8px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>{tramiteNumero || '697876124'}</div>
             <div style={{ position: 'absolute', top: '92.67%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '8px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>4052</div>
             <div style={{ position: 'absolute', left: '63.81%', bottom: '-9.46%', width: '33.84%', height: '42.19%', overflow: 'hidden' }}>
-              <img src="/barcode_relleno_final.png" alt="Codigo de barras" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              <img src="/barcode_relleno_final.webp" alt="Codigo de barras" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
             <div style={{ position: 'absolute', bottom: '2%', left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#1a3a5c', transition: 'background-color 0.3s ease' }} />
@@ -1091,7 +1091,7 @@ function DniPreviewCard({ nombre, apellido, dniNumero, sexo, nacimiento, fechaEm
         )}
         {!showFront && (
           <div className="DNI_back" style={{ aspectRatio: '1320 / 833', position: 'relative', width: '100%', backfaceVisibility: 'hidden', zIndex: 1 }}>
-            <img src="/dorso.png" alt="back dni" style={{ objectFit: 'contain', width: '100%' }} />
+            <img src="/dorso.webp" alt="back dni" style={{ objectFit: 'contain', width: '100%' }} />
             <div style={{ position: 'absolute', top: '5%', left: '2%', color: '#000', fontFamily: DNI_FONT, fontSize: '11px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
               <span>DOMICILIO: </span>
               <span>{(domicilio || '-').toUpperCase()}</span>
@@ -1147,7 +1147,7 @@ function HeaderBar({ onLogoTap, onMenuClick }: { onLogoTap?: () => void; onMenuC
       </span>
 
       <div style={{ width: '38px', height: '38px', borderRadius: '50%', overflow: 'hidden' }}>
-        <img src="/icons/profile-user.png" alt="Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+         <img src="/icons/profile-user.webp" alt="Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       </div>
     </div>
   );
@@ -1274,7 +1274,7 @@ function HomeView() {
 
       {/* Credentials Card Image - pulled up with negative margin to overlap the violet header's rounded bottom */}
       <div style={{ margin: '-4% 12px 0', borderRadius: '10px', overflow: 'hidden', position: 'relative', zIndex: 2 }}>
-        <img src="/credenciales.png" alt="Todas tus credenciales están al día" style={{ width: '100%', aspectRatio: '1077 / 298', objectFit: 'cover', display: 'block' }} />
+        <img src="/credenciales.webp" alt="Todas tus credenciales están al día" style={{ width: '100%', aspectRatio: '1077 / 298', objectFit: 'cover', display: 'block' }} />
       </div>
 
       {/* ¿Qué necesitás hoy? Section */}
@@ -1295,10 +1295,10 @@ function HomeView() {
       {/* Carrusel de carteles */}
       <div className="hide-scrollbar" style={{ margin: '52px 12px 0', display: 'flex', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
         <div style={{ flex: '0 0 calc(100% - 40px)', marginRight: '8px', borderRadius: '17px', overflow: 'hidden' }}>
-          <img src="/perfil.png" alt="Mantené tu perfil actualizado" style={{ width: '100%', aspectRatio: '1077 / 298', borderRadius: '17px', objectFit: 'cover', display: 'block' }} />
+          <img src="/perfil.webp" alt="Mantené tu perfil actualizado" style={{ width: '100%', aspectRatio: '1077 / 298', borderRadius: '17px', objectFit: 'cover', display: 'block' }} />
         </div>
         <div style={{ flex: '0 0 calc(100% - 40px)', borderRadius: '17px', overflow: 'hidden' }}>
-          <img src="/cartel-secundario.png" alt="Más información" style={{ width: '100%', aspectRatio: '1077 / 298', borderRadius: '17px', objectFit: 'cover', display: 'block' }} />
+          <img src="/cartel-secundario.webp" alt="Más información" style={{ width: '100%', aspectRatio: '1077 / 298', borderRadius: '17px', objectFit: 'cover', display: 'block' }} />
         </div>
       </div>
 
@@ -1387,7 +1387,7 @@ function DocumentosView() {
         <div style={{ background: '#fff', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden', marginBottom: '20px' }}>
           <button onClick={() => dni ? setDniExpanded(!dniExpanded) : null} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', border: 'none', borderBottom: dniExpanded ? '1px solid #f0f0f0' : 'none', background: 'none', cursor: dni ? 'pointer' : 'default', textAlign: 'left' }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
-              <img src="/icons/dni-icon.png" alt="DNI" style={{ width: '66.248px', height: '47.32px', marginRight: '16px' }} />
+              <img src="/icons/dni-icon.webp" alt="DNI" style={{ width: '66.248px', height: '47.32px', marginRight: '16px' }} />
               <div style={{ width: '2px', height: '36px', backgroundColor: '#ddd', marginRight: '12px' }} />
               <div>
                 <div style={{ fontSize: '14px', color: '#757575', marginBottom: '2px', fontFamily: SYS_FONT }}>Mis documentos</div>
@@ -1425,7 +1425,7 @@ function DocumentosView() {
           )}
           <button style={{ display: 'flex', alignItems: 'center', border: 'none', background: 'none', padding: '16px', width: '100%', cursor: 'pointer', fontFamily: SYS_FONT, borderTop: '1px solid #f0f0f0' }}>
             <span style={{ color: '#3333cc', fontSize: '20px', marginRight: '12px', display: 'flex', alignItems: 'center' }}>
-              <img src="/icons/help-dispositivo.png" alt="Ayuda" style={{ width: '39px', height: '39px' }} />
+              <img src="/icons/help-dispositivo.webp" alt="Ayuda" style={{ width: '39px', height: '39px' }} />
             </span>
             <span style={{ color: '#3333cc', fontSize: '14px', fontWeight: 500, fontFamily: SYS_FONT }}>Cambié o voy a cambiar de dispositivo</span>
           </button>
@@ -1642,7 +1642,7 @@ function DniViewerView() {
 
                       {/* Barcode - bottom right */}
                       <div style={{ position: 'absolute', left: '63.81%', bottom: '-9.46%', width: '33.84%', height: '42.19%', overflow: 'hidden' }}>
-                        <img src="/barcode_relleno_final.png" alt="Código de barras" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        <img src="/barcode_relleno_final.webp" alt="Código de barras" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                       </div>
 
                       {/* Dynamic dots indicator - next to barcode */}
@@ -1656,7 +1656,7 @@ function DniViewerView() {
                 ) : (
                   /* ======== BACK OF DNI ======== */
                   <div className="DNI_back" style={{ aspectRatio: '1320 / 833', position: 'relative', width: 'calc(min(100vw, 390px) - 74px)', backfaceVisibility: 'hidden', zIndex: 1 }}>
-                    <img src="/dorso.png" alt="back dni" style={{ objectFit: 'contain', width: '100%' }} />
+                    <img src="/dorso.webp" alt="back dni" style={{ objectFit: 'contain', width: '100%' }} />
 
                     {/* DOMICILIO */}
                     <div style={{ position: 'absolute', top: '5%', left: '2%', color: '#000', fontFamily: DNI_FONT, fontSize: '11px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
@@ -1694,11 +1694,11 @@ function DniViewerView() {
             {/* Button row 1: Ver detalle + Desactivar DNI */}
             <div className="DNI_contentBtnContainer" style={{ borderBottom: '1px solid #aeaeae', display: 'flex' }}>
               <div className="DNI_contentBtn" style={{ alignItems: 'center', display: 'flex', gap: '12px', padding: '14px 16px', position: 'relative', width: '100%', borderRight: '1px solid #aeaeae' }}>
-                <img src="/icons/logo-ojo.png" alt="Ver" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
+                <img src="/icons/logo-ojo.webp" alt="Ver" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
                 <span style={{ fontSize: '14px', fontWeight: 400, fontFamily: SYS_FONT, color: '#212121' }}>Ver detalle</span>
               </div>
               <div className="DNI_contentBtn" style={{ alignItems: 'center', display: 'flex', gap: '12px', padding: '14px 16px', position: 'relative', width: '100%' }}>
-                <img src="/icons/logo-X.png" alt="Desactivar" style={{ width: '17px', height: '24px', objectFit: 'contain' }} />
+                <img src="/icons/logo-X.webp" alt="Desactivar" style={{ width: '17px', height: '24px', objectFit: 'contain' }} />
                 <span style={{ fontSize: '14px', fontWeight: 400, fontFamily: SYS_FONT, color: '#212121' }}>Desactivar DNI</span>
               </div>
             </div>
@@ -1706,7 +1706,7 @@ function DniViewerView() {
             {/* Button row 2: Verifica código QR */}
             <div className="DNI_contentBtnContainer" style={{ display: 'flex' }}>
               <div className="DNI_contentBtn" onClick={(e) => { e.stopPropagation(); setShowQr(prev => !prev); }} style={{ alignItems: 'center', display: 'flex', gap: '12px', padding: '14px 16px', position: 'relative', width: '100%', cursor: 'pointer' }}>
-                <img src="/icons/logo-QR.png" alt="QR" style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
+                <img src="/icons/logo-QR.webp" alt="QR" style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
                 <span style={{ fontSize: '14px', fontWeight: 400, fontFamily: SYS_FONT, color: '#212121' }}>Verifica código QR</span>
                 <div style={{ margin: '0 10px -5px auto' }}>
                   <svg width="15px" viewBox="0 0 25.93 25.93" fill="#565656">
@@ -1720,7 +1720,7 @@ function DniViewerView() {
           {/* QR expandable section */}
           {showQr && (
             <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-              <img src="/icons/logo-QR.png" alt="QR" style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
+              <img src="/icons/logo-QR.webp" alt="QR" style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
               <p style={{ color: '#666', fontSize: '12px', fontFamily: SYS_FONT, textAlign: 'center', margin: '4px 0 0' }}>
                 Escaneá este código para verificar la autenticidad del documento
               </p>
@@ -2133,7 +2133,7 @@ function NovedadesView() {
             <span style={{ color: '#fff', fontWeight: 700, fontFamily: SYS_FONT }}>Argentina</span>
           </div>
           <div style={{ width: '36px', height: '36px', borderRadius: '50%', overflow: 'hidden' }}>
-            <img src="/icons/profile-user.png" alt="Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src="/icons/profile-user.webp" alt="Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
         </div>
       </div>
@@ -2240,7 +2240,7 @@ function TelefonosView() {
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              <img src="/icons/icon-telefono.png" alt="Teléfono" style={{ width: '44px', height: '30px' }} />
+              <img src="/icons/icon-telefono.webp" alt="Teléfono" style={{ width: '44px', height: '30px' }} />
             </div>
           </div>
         ))}

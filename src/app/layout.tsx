@@ -20,7 +20,10 @@ export const metadata: Metadata = {
   title: "Mi Argentina",
   description: "Registrate para obtener tu DNI digital",
   icons: {
-    icon: "/icons/favicon-32.png",
+    icon: [
+      { url: "/icons/favicon-32.webp", type: "image/webp" },
+      { url: "/icons/apple-touch-icon.webp", sizes: "180x180", type: "image/webp" },
+    ],
     apple: "/icons/apple-touch-icon.png",
   },
   manifest: "/manifest.json",
