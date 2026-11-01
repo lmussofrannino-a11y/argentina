@@ -8,7 +8,7 @@ const batchSize = 5
 const allowedModes = ['--upload', '--clear-inline', '--restore-inline']
 
 if (!allowedModes.includes(mode)) {
-  console.error('Uso: node --env-file=.env scripts/migrate-dni-images-to-r2.mjs --upload | --clear-inline --confirm | --restore-inline --confirm')
+  console.error('Uso: node --env-file=.env --env-file=.env.local scripts/migrate-dni-images-to-r2.mjs --upload | --clear-inline --confirm | --restore-inline --confirm')
   process.exit(2)
 }
 

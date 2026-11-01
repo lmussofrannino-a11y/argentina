@@ -6,7 +6,7 @@ La app puede guardar fotos y firmas nuevas en un bucket privado de R2. Las filas
 
 1. Crear un bucket R2 con acceso privado y clase **Standard**. No habilitar un dominio público para este bucket.
 2. Crear un token de API de R2 limitado a ese bucket, con lectura y escritura de objetos.
-3. Agregar estas variables de entorno tanto al entorno local como al proyecto de Vercel:
+3. Agregar estas variables de entorno al entorno local (`.env.local`) y al proyecto de Vercel:
 
    ```text
    CLOUDFLARE_R2_ACCOUNT_ID=...
@@ -37,7 +37,7 @@ Con `CLOUDFLARE_R2_WRITE_ENABLED=false`, la app mantiene compatibilidad y sigue 
 
 ## Migrar imágenes existentes
 
-Primero crear un respaldo de Neon. Ejecutar desde la carpeta del proyecto, con `DATABASE_URL` y las variables R2 disponibles en `.env`:
+Primero crear un respaldo de Neon. Guardar `DATABASE_URL` en el archivo local ignorado `.env.migration.local` y las variables R2 en `.env.local`:
 
 ```powershell
 npm run storage:migrate-dni-images -- --upload
