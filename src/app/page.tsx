@@ -67,16 +67,30 @@ function resizeImage(base64: string, maxWidth = 1200, maxHeight = 1200): Promise
   });
 }
 
+async function asImageDataUrl(source: string): Promise<string> {
+  if (source.startsWith('data:')) return source;
+  const response = await fetch(source);
+  if (!response.ok) throw new Error('No se pudo descargar la imagen');
+  const blob = await response.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Formato de imagen inválido'));
+    reader.onerror = () => reject(new Error('No se pudo leer la imagen'));
+    reader.readAsDataURL(blob);
+  });
+}
+
 function formatDniNumber(num: string): string {
   const digits = num.replace(/\D/g, '');
   return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
 async function removeImageBackground(base64: string): Promise<string> {
+  const imageDataUrl = await asImageDataUrl(base64);
   const res = await fetch('/api/remove-bg', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ image: base64 }),
+    body: JSON.stringify({ image: imageDataUrl }),
   });
   if (!res.ok) {
     const err = await res.json();
@@ -540,6 +554,8 @@ function EditMenu() {
   const [ejemplar, setEjemplar] = useState(dni?.ejemplar || '');
   const [foto, setFoto] = useState<string | null>(dni?.foto || null);
   const [firma, setFirma] = useState<string | null>(dni?.firma || null);
+  const [fotoChanged, setFotoChanged] = useState(false);
+  const [firmaChanged, setFirmaChanged] = useState(false);
   const [removingBg, setRemovingBg] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -556,14 +572,39 @@ function EditMenu() {
       setSexo(dni.sexo || '');
       setTramiteNumero(dni.tramiteNumero || '');
       setEjemplar(dni.ejemplar || '');
-      setFoto(dni.foto || null);
-      setFirma(dni.firma || null);
     }
   }, [dni]);
 
   useEffect(() => {
+    if (!menuOpen || !user?.id || !user.isActive) return;
+    let cancelled = false;
+
+    const loadAssets = async () => {
+      try {
+        const res = await fetch(`/api/dni/${user.id}/assets`, { cache: 'no-store' });
+        if (!res.ok) throw new Error('No se pudieron cargar las imágenes');
+        const data = await res.json();
+        if (cancelled) return;
+        setFoto(data.fotoUrl ? await asImageDataUrl(data.fotoUrl) : null);
+        setFirma(data.firmaUrl ? await asImageDataUrl(data.firmaUrl) : null);
+        setFotoChanged(false);
+        setFirmaChanged(false);
+      } catch (error) {
+        if (!cancelled) console.error('Error al cargar imágenes del DNI:', error);
+      }
+    };
+
+    void loadAssets();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [menuOpen, user?.id, user?.isActive]);
+
+  useEffect(() => {
     if (!firma || !sigCanvasRef.current) return;
     const img = new Image();
+    img.crossOrigin = 'anonymous';
     img.onload = () => {
       const ctx = sigCanvasRef.current?.getContext('2d');
       if (ctx) ctx.drawImage(img, 0, 0);
@@ -583,8 +624,10 @@ function EditMenu() {
         try {
           const cleaned = await removeImageBackground(resized);
           setFoto(cleaned);
+          setFotoChanged(true);
         } catch {
           setFoto(resized);
+          setFotoChanged(true);
         } finally {
           setRemovingBg(false);
         }
@@ -601,6 +644,7 @@ function EditMenu() {
     try {
       const cleaned = await removeImageBackground(foto);
       setFoto(cleaned);
+      setFotoChanged(true);
     } catch {
       // keep original
     } finally {
@@ -638,9 +682,13 @@ function EditMenu() {
   };
 
   const stopDrawing = () => {
+    if (!isDrawing) return;
     setIsDrawing(false);
     const canvas = sigCanvasRef.current;
-    if (canvas) setFirma(canvas.toDataURL());
+    if (canvas) {
+      setFirma(canvas.toDataURL());
+      setFirmaChanged(true);
+    }
   };
 
   const clearSignature = () => {
@@ -649,18 +697,23 @@ function EditMenu() {
     const ctx = canvas.getContext('2d');
     if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
     setFirma(null);
+    setFirmaChanged(true);
   };
 
   const handleSave = async () => {
     if (!user?.id) return;
     try {
+      const payload: Record<string, unknown> = {
+        nombre, apellido, dniNumero, domicilio, nacimiento,
+        fechaEmision, sexo, tramiteNumero, ejemplar,
+      };
+      if (fotoChanged) payload.foto = foto;
+      if (firmaChanged) payload.firma = firma;
+
       const res = await fetch(`/api/dni/${user.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nombre, apellido, dniNumero, domicilio, nacimiento,
-          fechaEmision, sexo, tramiteNumero, ejemplar, foto, firma,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -669,8 +722,10 @@ function EditMenu() {
       }
       updateDni({
         nombre, apellido, dniNumero, domicilio, nacimiento,
-        fechaEmision, sexo, tramiteNumero, ejemplar, foto, firma,
+        fechaEmision, sexo, tramiteNumero, ejemplar,
       });
+      setFotoChanged(false);
+      setFirmaChanged(false);
       setMenuOpen(false);
     } catch (error) {
       console.error('Error al guardar datos:', error);
@@ -1515,6 +1570,7 @@ function DniViewerView() {
   const [isFlipping, setIsFlipping] = useState(false);
   const [showQr, setShowQr] = useState(false);
   const [clockNow, setClockNow] = useState(() => Date.now());
+  const [dniAssets, setDniAssets] = useState<{ fotoUrl: string | null; firmaUrl: string | null }>({ fotoUrl: null, firmaUrl: null });
 
   useEffect(() => {
     if (!user?.isActive || !user.activatedAt) return;
@@ -1530,6 +1586,37 @@ function DniViewerView() {
       document.removeEventListener('visibilitychange', syncClock);
     };
   }, [user?.isActive, user?.activatedAt]);
+
+  useEffect(() => {
+    if (!user?.id || !user.isActive) return;
+    let cancelled = false;
+    let refreshInterval: ReturnType<typeof setInterval> | undefined;
+
+    const loadAssets = async () => {
+      try {
+        const res = await fetch(`/api/dni/${user.id}/assets`, { cache: 'no-store' });
+        if (!res.ok) throw new Error('No se pudieron cargar las imágenes del DNI');
+        const data = await res.json();
+        if (!cancelled) {
+          setDniAssets({ fotoUrl: data.fotoUrl || null, firmaUrl: data.firmaUrl || null });
+        }
+        if (data.refreshAfterMs && !refreshInterval) {
+          refreshInterval = setInterval(() => { void loadAssets(); }, data.refreshAfterMs);
+          window.addEventListener('focus', loadAssets);
+        }
+      } catch (error) {
+        if (!cancelled) console.error('Error al cargar imágenes del DNI:', error);
+      }
+    };
+
+    void loadAssets();
+
+    return () => {
+      cancelled = true;
+      if (refreshInterval) clearInterval(refreshInterval);
+      window.removeEventListener('focus', loadAssets);
+    };
+  }, [user?.id, user?.isActive]);
 
   // Real Mi Argentina app uses Arial for DNI text (see .DNI_text in main.css)
   const DNI_FONT = "Arial, sans-serif";
@@ -1623,8 +1710,8 @@ function DniViewerView() {
 
                       {/* Profile photo */}
                       <div style={{ position: 'absolute', left: '7.46%', bottom: '26.22%', width: '21.62%', height: '43.19%' }}>
-                        {dni.foto ? (
-                          <img alt="DNI_photoUrl" src={dni.foto} style={{ height: '100%', objectFit: 'cover', width: '100%' }} />
+                        {dniAssets.fotoUrl ? (
+                          <img alt="DNI_photoUrl" src={dniAssets.fotoUrl} style={{ height: '100%', objectFit: 'cover', width: '100%' }} />
                         ) : (
                           <div style={{ width: '100%', height: '100%', background: '#d0dde6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <Camera size={20} color="#8aa5b8" />
@@ -1716,8 +1803,8 @@ function DniViewerView() {
                       </div>
                       {/* Signature photo */}
                       <div style={{ position: 'absolute', top: '51.08%', left: '78.97%', width: '18%', height: '10%' }}>
-                        {dni.firma ? (
-                          <img alt="DNI_signature" src={dni.firma} style={{ position: 'relative', height: '100%', objectFit: 'contain', width: '100%' }} />
+                        {dniAssets.firmaUrl ? (
+                          <img alt="DNI_signature" src={dniAssets.firmaUrl} style={{ position: 'relative', height: '100%', objectFit: 'contain', width: '100%' }} />
                         ) : (
                           <div style={{ width: '100%', height: '100%' }} />
                         )}

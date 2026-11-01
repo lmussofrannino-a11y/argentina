@@ -1,5 +1,15 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { dniPublicSelect, withoutDniImages } from '@/lib/dni-response'
+
+const userPayloadSelect = {
+  id: true,
+  email: true,
+  isActive: true,
+  tokens: true,
+  activatedAt: true,
+  dni: { select: dniPublicSelect },
+} as const
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,14 +50,13 @@ export async function POST(request: NextRequest) {
       const updated = await db.user.update({
         where: { id: userId },
         data: { tokens: newTokens },
-        include: { dni: true },
+        select: userPayloadSelect,
       })
-      const { password: _, ...userWithoutPassword } = updated
       const action = addTokens > 0 ? 'agregaron' : 'quitaron'
       return NextResponse.json(
         {
           message: `Se ${action} ${Math.abs(addTokens)} token(s). Total: ${updated.tokens}`,
-          user: userWithoutPassword,
+          user: withoutDniImages(updated),
         },
         { status: 200 }
       )
@@ -67,7 +76,7 @@ export async function POST(request: NextRequest) {
       updatedUser = await db.user.update({
         where: { id: userId },
         data: { isActive: false, activatedAt: null },
-        include: { dni: true },
+        select: userPayloadSelect,
       })
     } else if (existingUser.activatedAt) {
       const hoursSinceActivation = (Date.now() - new Date(existingUser.activatedAt).getTime()) / (1000 * 60 * 60)
@@ -75,29 +84,27 @@ export async function POST(request: NextRequest) {
         updatedUser = await db.user.update({
           where: { id: userId },
           data: { isActive: true },
-          include: { dni: true },
+          select: userPayloadSelect,
         })
       } else {
         updatedUser = await db.user.update({
           where: { id: userId },
           data: { isActive: true, activatedAt: new Date() },
-          include: { dni: true },
+          select: userPayloadSelect,
         })
       }
     } else {
       updatedUser = await db.user.update({
         where: { id: userId },
         data: { isActive: true, activatedAt: new Date() },
-        include: { dni: true },
+        select: userPayloadSelect,
       })
     }
-
-    const { password: _, ...userWithoutPassword } = updatedUser
 
     return NextResponse.json(
       {
         message: isActive ? 'Cuenta activada exitosamente' : 'Cuenta desactivada',
-        user: userWithoutPassword,
+        user: withoutDniImages(updatedUser),
       },
       { status: 200 }
     )

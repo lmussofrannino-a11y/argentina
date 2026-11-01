@@ -72,11 +72,28 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'mi-argentina-session', // localStorage key
-      partialize: (state) => ({ view: state.view, user: state.user }), // only persist view + user
+      version: 2,
+      migrate: (persistedState) => {
+        const state = persistedState as Partial<AppState>;
+        if (!state.user) return { view: state.view ?? 'login', user: null };
+        return {
+          view: state.view ?? 'login',
+          user: {
+            ...state.user,
+            dni: state.user.dni ? { ...state.user.dni, foto: null as null, firma: null as null } : null,
+          },
+        };
+      },
+      partialize: (state) => ({
+        view: state.view,
+        user: state.user ? {
+          ...state.user,
+          dni: state.user.dni ? { ...state.user.dni, foto: null, firma: null } : null,
+        } : null,
+      }), // Persist profile data, never image payloads.
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },
     }
   )
 );
-

@@ -1,5 +1,8 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { randomUUID } from 'node:crypto'
+import { dniPublicSelect, withoutDniImages } from '@/lib/dni-response'
+import { isR2WriteEnabled, uploadDniImage } from '@/lib/r2-dni-images'
 
 function generateTramiteNumero(): string {
   let result = ''
@@ -78,9 +81,18 @@ export async function POST(request: NextRequest) {
     }
 
     const tramiteNumero = providedTramiteNumero || generateTramiteNumero()
+    const userId = randomUUID()
+    const useR2 = isR2WriteEnabled()
+    const [fotoUpload, firmaUpload] = useR2
+      ? await Promise.all([
+          typeof foto === 'string' ? uploadDniImage(userId, 'foto', foto) : null,
+          typeof firma === 'string' ? uploadDniImage(userId, 'firma', firma) : null,
+        ])
+      : [null, null]
 
     const user = await db.user.create({
       data: {
+        id: userId,
         email,
         password,
         dni: {
@@ -92,24 +104,31 @@ export async function POST(request: NextRequest) {
             nacimiento,
             fechaEmision,
             sexo,
-            firma: firma || null,
-            foto: foto || null,
+            firma: useR2 ? null : (typeof firma === 'string' ? firma : null),
+            foto: useR2 ? null : (typeof foto === 'string' ? foto : null),
+            firmaStorageKey: firmaUpload?.key ?? null,
+            fotoStorageKey: fotoUpload?.key ?? null,
             userId_value: dniNumero,
             tramiteNumero,
           },
         },
       },
-      include: {
-        dni: true,
+      select: {
+        id: true,
+        email: true,
+        isActive: true,
+        tokens: true,
+        activatedAt: true,
+        dni: { select: dniPublicSelect },
       },
     })
 
-    const { password: _, ...userWithoutPassword } = user
+    const safeUser = withoutDniImages(user)
 
     return NextResponse.json(
       {
         message: 'Usuario registrado exitosamente',
-        user: userWithoutPassword,
+        user: safeUser,
       },
       { status: 201 }
     )

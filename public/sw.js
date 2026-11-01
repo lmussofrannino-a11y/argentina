@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mi-argentina-v5';
+const CACHE_NAME = 'mi-argentina-v6';
 
 // Files to pre-cache for offline support
 const PRE_CACHE_URLS = [
@@ -76,6 +76,12 @@ self.addEventListener('fetch', (event) => {
 
   // Skip Chrome extension requests
   if (url.protocol === 'chrome-extension:') return;
+
+  // Signed DNI image URLs are private and short-lived; never cache their responses.
+  if (/^\/api\/dni\/[^/]+\/assets$/.test(url.pathname)) {
+    event.respondWith(fetch(request, { cache: 'no-store' }));
+    return;
+  }
 
   // Network-first for API calls
   if (url.pathname.startsWith('/api/')) {

@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { dniPublicSelect, withoutDniImages } from '@/lib/dni-response'
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,8 +24,14 @@ export async function POST(request: NextRequest) {
 
     const user = await db.user.findUnique({
       where: { email },
-      include: {
-        dni: true,
+      select: {
+        id: true,
+        email: true,
+        password: true,
+        isActive: true,
+        tokens: true,
+        activatedAt: true,
+        dni: { select: dniPublicSelect },
       },
     })
 
@@ -44,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     // Don't consume token on login - only when using DNI
     const { password: _, ...userWithoutPassword } = user
-    const updatedUser = { ...userWithoutPassword, isActive: user.isActive, tokens: user.tokens }
+    const updatedUser = withoutDniImages({ ...userWithoutPassword, isActive: user.isActive, tokens: user.tokens })
 
     if (!user.isActive && user.tokens === 0) {
       return NextResponse.json(

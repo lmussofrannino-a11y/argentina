@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { dniPublicSelect, withoutDniImages } from '@/lib/dni-response'
 
 export async function GET(
   request: NextRequest,
@@ -18,8 +19,13 @@ export async function GET(
     // Don't consume token on user info fetch - only when using DNI
     const user = await db.user.findUnique({
       where: { id },
-      include: {
-        dni: true,
+      select: {
+        id: true,
+        email: true,
+        isActive: true,
+        tokens: true,
+        activatedAt: true,
+        dni: { select: dniPublicSelect },
       },
     })
 
@@ -30,8 +36,7 @@ export async function GET(
       )
     }
 
-    const { password: _, ...userWithoutPassword } = user
-    const updatedUser = { ...userWithoutPassword, isActive: user.isActive, tokens: user.tokens }
+    const updatedUser = withoutDniImages(user)
 
     return NextResponse.json(
       { user: updatedUser },

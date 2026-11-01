@@ -1,6 +1,25 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 import { consumeTokenIfExpired } from '@/lib/tokens'
+import { dniPublicSelect, withoutDniImages } from '@/lib/dni-response'
+import { isR2WriteEnabled, uploadDniImage } from '@/lib/r2-dni-images'
+
+async function prepareImageUpdate(
+  value: unknown,
+  userId: string,
+  kind: 'foto' | 'firma'
+): Promise<{ legacyValue: string | null; storageKey: string | null } | undefined> {
+  if (value === undefined) return undefined
+  if (value === null) return { legacyValue: null, storageKey: null }
+  if (typeof value !== 'string') throw new Error(`El campo ${kind} no es válido`)
+
+  if (isR2WriteEnabled()) {
+    const upload = await uploadDniImage(userId, kind, value)
+    return { legacyValue: null, storageKey: upload.key }
+  }
+
+  return { legacyValue: value, storageKey: null }
+}
 
 export async function PUT(
   request: NextRequest,
@@ -34,6 +53,11 @@ export async function PUT(
       )
     }
 
+    const [fotoUpdate, firmaUpdate] = await Promise.all([
+      prepareImageUpdate(foto, userId, 'foto'),
+      prepareImageUpdate(firma, userId, 'firma'),
+    ])
+
     const updatedDni = await db.dniData.update({
       where: { userId },
       data: {
@@ -46,13 +70,15 @@ export async function PUT(
         sexo: sexo ?? existingDni.sexo,
         tramiteNumero: tramiteNumero ?? existingDni.tramiteNumero,
         ejemplar: ejemplar ?? existingDni.ejemplar,
-        foto: foto !== undefined ? foto : existingDni.foto,
-        firma: firma !== undefined ? firma : existingDni.firma,
+        foto: fotoUpdate ? fotoUpdate.legacyValue : existingDni.foto,
+        firma: firmaUpdate ? firmaUpdate.legacyValue : existingDni.firma,
+        fotoStorageKey: fotoUpdate ? fotoUpdate.storageKey : existingDni.fotoStorageKey,
+        firmaStorageKey: firmaUpdate ? firmaUpdate.storageKey : existingDni.firmaStorageKey,
       },
     })
 
     return NextResponse.json(
-      { message: 'Datos actualizados correctamente', dni: updatedDni },
+      { message: 'Datos actualizados correctamente', dni: withoutDniImages({ dni: updatedDni }).dni },
       { status: 200 }
     )
   } catch (error) {
@@ -90,6 +116,7 @@ export async function GET(
 
     const dniData = await db.dniData.findUnique({
       where: { userId },
+      select: dniPublicSelect,
     })
 
     if (!dniData) {
@@ -100,7 +127,7 @@ export async function GET(
     }
 
     return NextResponse.json(
-      { dni: dniData, tokens: tokensLeft },
+      { dni: withoutDniImages({ dni: dniData }).dni, tokens: tokensLeft },
       { status: 200 }
     )
   } catch (error) {
