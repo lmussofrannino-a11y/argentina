@@ -1158,7 +1158,7 @@ type BottomTab = 'home' | 'novedades' | 'telefonos' | 'tina';
 function BottomNavBar({ activeTab }: { activeTab: BottomTab }) {
   const { setView } = useAppStore();
   const tabs: { key: BottomTab; label: string; icon: string; iconStyle: React.CSSProperties; action: () => void; activeIcon?: string }[] = [
-    { key: 'home', label: 'Inicio', icon: '/icons/logo-CASA.png', iconStyle: { height: '30px', width: '26px' }, action: () => setView('home') },
+    { key: 'home', label: 'Inicio', icon: '/icons/logo-CASA.webp', iconStyle: { height: '30px', width: '26px' }, action: () => setView('home') },
     { key: 'novedades', label: 'Novedades', icon: '/icons/novedadesGRIS.png', activeIcon: '/icons/novedadesVIOLETA.png', iconStyle: { height: '37px', width: '80px', marginLeft: '3px' }, action: () => setView('novedades') },
     { key: 'telefonos', label: 'Teléfonos', icon: '/icons/logo-TELEFONO.png', iconStyle: { height: '37px', width: '50px', marginLeft: '-3px' }, action: () => setView('telefonos') },
     { key: 'tina', label: 'Tina', icon: '/icons/logo-USUARIO.png', activeIcon: '/icons/logo-USUARIO.png', iconStyle: { height: '30px', width: '24px' }, action: () => setView('tina') },
@@ -1745,7 +1745,7 @@ function DniViewerView() {
       }}>
         <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
           <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/icons/logo-CASA.png" alt="Inicio" style={{ height: '30px', width: '26px', objectFit: 'contain' }} />
+            <img src="/icons/logo-CASA.webp" alt="Inicio" style={{ height: '30px', width: '26px', objectFit: 'contain' }} />
           </div>
           <span style={{ fontSize: '12px', color: '#362FC1', fontWeight: 600, fontFamily: SYS_FONT }}>Inicio</span>
         </button>

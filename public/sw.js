@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mi-argentina-v1';
+const CACHE_NAME = 'mi-argentina-v2';
 
 // Files to pre-cache for offline support
 const PRE_CACHE_URLS = [
@@ -15,7 +15,7 @@ const PRE_CACHE_URLS = [
   '/sample_signature.png',
   '/card-mundial.png',
   '/card-turnos.png',
-  '/icons/logo-CASA.png',
+  '/icons/logo-CASA.webp',
   '/icons/logo-NOVEDADES.png',
   '/icons/logo-TELEFONO.png',
   '/icons/logo-USUARIO.png',
