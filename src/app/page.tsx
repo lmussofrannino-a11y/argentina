@@ -1239,14 +1239,14 @@ function HomeView() {
   };
 
   const services = [
-    { icon: '/icons/serv-tramites.png', label: 'Documentos', action: () => setView('documentos'), w: 49, h: 49, scale: true },
-    { icon: '/icons/serv-vehiculos.png', label: 'Vehículos', action: () => setView('vehiculos'), w: 79, h: 81, scale: true },
-    { icon: '/icons/serv-trabajo.png', label: 'Trabajo', action: () => setView('trabajo'), w: 42, h: 44, scale: true },
-    { icon: '/icons/serv-salud.png', label: 'Salud', action: () => setView('salud') },
-    { icon: '/icons/serv-cobros.png', label: 'Cobros', action: () => setView('cobros'), w: 48, h: 48, scale: true },
-    { icon: '/icons/serv-documentos.png', label: 'Trámites', action: () => setView('tramites'), w: 48, h: 48, scale: true },
-    { icon: '/icons/serv-turnos.png', label: 'Turnos', action: () => {} },
-    { icon: '/icons/serv-hijos.png', label: 'Hijos', action: () => setView('hijos'), w: 45, h: 45, scale: true },
+    { icon: '/icons/serv-tramites.webp', label: 'Documentos', action: () => setView('documentos'), w: 49, h: 49, scale: true },
+    { icon: '/icons/serv-vehiculos.webp', label: 'Vehículos', action: () => setView('vehiculos'), w: 79, h: 81, scale: true },
+    { icon: '/icons/serv-trabajo.webp', label: 'Trabajo', action: () => setView('trabajo'), w: 42, h: 44, scale: true },
+    { icon: '/icons/serv-salud.webp', label: 'Salud', action: () => setView('salud') },
+    { icon: '/icons/serv-cobros.webp', label: 'Cobros', action: () => setView('cobros'), w: 48, h: 48, scale: true },
+    { icon: '/icons/serv-documentos.webp', label: 'Trámites', action: () => setView('tramites'), w: 48, h: 48, scale: true },
+    { icon: '/icons/serv-turnos.webp', label: 'Turnos', action: () => {} },
+    { icon: '/icons/serv-hijos.webp', label: 'Hijos', action: () => setView('hijos'), w: 45, h: 45, scale: true },
   ];
 
   return (

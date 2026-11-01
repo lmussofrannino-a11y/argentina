@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mi-argentina-v3';
+const CACHE_NAME = 'mi-argentina-v4';
 
 // Files to pre-cache for offline support
 const PRE_CACHE_URLS = [
@@ -24,14 +24,14 @@ const PRE_CACHE_URLS = [
   '/icons/logo-ojo.png',
   '/icons/logo-X.png',
   '/icons/logo-QR.png',
-  '/icons/serv-tramites.png',
-  '/icons/serv-vehiculos.png',
-  '/icons/serv-trabajo.png',
-  '/icons/serv-salud.png',
-  '/icons/serv-cobros.png',
-  '/icons/serv-documentos.png',
-  '/icons/serv-turnos.png',
-  '/icons/serv-hijos.png',
+  '/icons/serv-tramites.webp',
+  '/icons/serv-vehiculos.webp',
+  '/icons/serv-trabajo.webp',
+  '/icons/serv-salud.webp',
+  '/icons/serv-cobros.webp',
+  '/icons/serv-documentos.webp',
+  '/icons/serv-turnos.webp',
+  '/icons/serv-hijos.webp',
 ];
 
 // Install: pre-cache essential files
