@@ -1159,9 +1159,9 @@ function BottomNavBar({ activeTab }: { activeTab: BottomTab }) {
   const { setView } = useAppStore();
   const tabs: { key: BottomTab; label: string; icon: string; iconStyle: React.CSSProperties; action: () => void; activeIcon?: string }[] = [
     { key: 'home', label: 'Inicio', icon: '/icons/logo-CASA.webp', iconStyle: { height: '30px', width: '26px' }, action: () => setView('home') },
-    { key: 'novedades', label: 'Novedades', icon: '/icons/novedadesGRIS.png', activeIcon: '/icons/novedadesVIOLETA.png', iconStyle: { height: '37px', width: '80px', marginLeft: '3px' }, action: () => setView('novedades') },
-    { key: 'telefonos', label: 'Teléfonos', icon: '/icons/logo-TELEFONO.png', iconStyle: { height: '37px', width: '50px', marginLeft: '-3px' }, action: () => setView('telefonos') },
-    { key: 'tina', label: 'Tina', icon: '/icons/logo-USUARIO.png', activeIcon: '/icons/logo-USUARIO.png', iconStyle: { height: '30px', width: '24px' }, action: () => setView('tina') },
+    { key: 'novedades', label: 'Novedades', icon: '/icons/novedadesGRIS.webp', activeIcon: '/icons/novedadesVIOLETA.webp', iconStyle: { height: '37px', width: '80px', marginLeft: '3px' }, action: () => setView('novedades') },
+    { key: 'telefonos', label: 'Teléfonos', icon: '/icons/logo-TELEFONO.webp', iconStyle: { height: '37px', width: '50px', marginLeft: '-3px' }, action: () => setView('telefonos') },
+    { key: 'tina', label: 'Tina', icon: '/icons/logo-USUARIO.webp', activeIcon: '/icons/logo-USUARIO.webp', iconStyle: { height: '30px', width: '24px' }, action: () => setView('tina') },
   ];
 
   return (
@@ -1751,19 +1751,19 @@ function DniViewerView() {
         </button>
         <button style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
           <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/icons/logo-NOVEDADES.png" alt="Novedades" style={{ height: '37px', width: '80px', marginLeft: '3px', objectFit: 'contain' }} />
+            <img src="/icons/logo-NOVEDADES.webp" alt="Novedades" style={{ height: '37px', width: '80px', marginLeft: '3px', objectFit: 'contain' }} />
           </div>
           <span style={{ fontSize: '12px', color: '#757575', fontFamily: SYS_FONT }}>Novedades</span>
         </button>
         <button style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
           <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/icons/logo-TELEFONO.png" alt="Teléfonos" style={{ height: '37px', width: '50px', marginLeft: '-3px', objectFit: 'contain' }} />
+            <img src="/icons/logo-TELEFONO.webp" alt="Teléfonos" style={{ height: '37px', width: '50px', marginLeft: '-3px', objectFit: 'contain' }} />
           </div>
           <span style={{ fontSize: '12px', color: '#757575', fontFamily: SYS_FONT }}>Teléfonos</span>
         </button>
         <button style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
           <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/icons/logo-USUARIO.png" alt="Usuario" style={{ height: '30px', width: '24px', objectFit: 'contain' }} />
+            <img src="/icons/logo-USUARIO.webp" alt="Usuario" style={{ height: '30px', width: '24px', objectFit: 'contain' }} />
           </div>
           <span style={{ fontSize: '12px', color: '#757575', fontFamily: SYS_FONT }}>Usuario</span>
         </button>
