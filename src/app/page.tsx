@@ -372,25 +372,89 @@ export default function MiArgentinaApp() {
     return () => obs.disconnect();
   }, []);
 
-  // Global expiry timer — runs regardless of which view the user is on
+  // Global expiry timer — runs regardless of which view the user is on.
+  // The viewer also checks the deadline locally so it can hide the DNI at once,
+  // while this request persists the expiry without consuming another token.
   useEffect(() => {
     if (!user?.id || !user.isActive || !user.activatedAt) return;
 
-    const activatedAt = new Date(user.activatedAt);
+    const userId = user.id;
+    const activationTimestamp = user.activatedAt;
+    const expiresAt = new Date(activationTimestamp).getTime() + 24 * 60 * 60 * 1000;
+    let requestPending = false;
+    let retryAt = 0;
 
-    const check = () => {
-      const diff = Date.now() - activatedAt.getTime();
-      if (diff >= 24 * 60 * 60 * 1000) {
-        // Only update UI state, don't call deactivate API
-        // The consumeTokenIfExpired function in DNI route will handle expiry
-        setUser({ ...user, isActive: false, activatedAt: null });
+    const checkAndExpire = async () => {
+      if (Date.now() < expiresAt || Date.now() < retryAt || requestPending) return;
+
+      const currentUser = useAppStore.getState().user;
+      if (
+        !currentUser ||
+        currentUser.id !== userId ||
+        !currentUser.isActive ||
+        currentUser.activatedAt !== activationTimestamp
+      ) return;
+
+      requestPending = true;
+      try {
+        const response = await fetch('/api/tokens/deactivate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, activatedAt: activationTimestamp }),
+        });
+        const data = await response.json();
+
+        if (response.status === 409 && data.isActive && data.activatedAt) {
+          const latestUser = useAppStore.getState().user;
+          if (latestUser?.id === userId && latestUser.activatedAt === activationTimestamp) {
+            setUser({
+              ...latestUser,
+              isActive: true,
+              activatedAt: data.activatedAt,
+              tokens: typeof data.tokensLeft === 'number' ? data.tokensLeft : latestUser.tokens,
+            });
+          }
+          retryAt = Date.now() + 15_000;
+          return;
+        }
+
+        if (!response.ok || !data.success) throw new Error(data.error || 'No se pudo guardar el vencimiento');
+
+        const latestUser = useAppStore.getState().user;
+        if (latestUser?.id === userId && latestUser.activatedAt === activationTimestamp) {
+          setUser({
+            ...latestUser,
+            isActive: data.isActive,
+            activatedAt: data.activatedAt ?? null,
+            tokens: typeof data.tokensLeft === 'number' ? data.tokensLeft : latestUser.tokens,
+          });
+        }
+        retryAt = 0;
+      } catch {
+        // Retry periodically if offline or if the server is temporarily unavailable.
+        retryAt = Date.now() + 15_000;
+      } finally {
+        requestPending = false;
       }
     };
 
-    check();
-    const interval = setInterval(check, 1000);
-    return () => clearInterval(interval);
-  }, [user?.id, user?.isActive, user?.activatedAt]);
+    const onResume = () => {
+      if (document.visibilityState !== 'hidden') {
+        retryAt = 0;
+        void checkAndExpire();
+      }
+    };
+
+    void checkAndExpire();
+    const interval = setInterval(checkAndExpire, 1000);
+    window.addEventListener('focus', onResume);
+    document.addEventListener('visibilitychange', onResume);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onResume);
+      document.removeEventListener('visibilitychange', onResume);
+    };
+  }, [user?.id, user?.isActive, user?.activatedAt, setUser]);
 
   // Handle Mercado Pago redirect after payment
   useEffect(() => {
@@ -1450,6 +1514,22 @@ function DniViewerView() {
   const [showFront, setShowFront] = useState(true);
   const [isFlipping, setIsFlipping] = useState(false);
   const [showQr, setShowQr] = useState(false);
+  const [clockNow, setClockNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!user?.isActive || !user.activatedAt) return;
+
+    const syncClock = () => setClockNow(Date.now());
+    syncClock();
+    const interval = setInterval(syncClock, 1000);
+    window.addEventListener('focus', syncClock);
+    document.addEventListener('visibilitychange', syncClock);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', syncClock);
+      document.removeEventListener('visibilitychange', syncClock);
+    };
+  }, [user?.isActive, user?.activatedAt]);
 
   // Real Mi Argentina app uses Arial for DNI text (see .DNI_text in main.css)
   const DNI_FONT = "Arial, sans-serif";
@@ -1476,6 +1556,32 @@ function DniViewerView() {
   }, []);
 
   if (!dni) return <div style={{ padding: 40, textAlign: 'center', fontFamily: SYS_FONT }}>No hay datos de DNI</div>;
+
+  const tokenExpired = !user?.isActive || (
+    !!user.activatedAt && clockNow >= new Date(user.activatedAt).getTime() + 24 * 60 * 60 * 1000
+  );
+
+  if (tokenExpired) {
+    return (
+      <div style={{ backgroundColor: '#f0f0f0', minHeight: '100vh' }}>
+        <header style={{ background: '#362FC1', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '55px 16px 16px' }}>
+          <span style={{ color: '#fff', fontSize: '18px', fontWeight: 700, fontFamily: SYS_FONT }}>DNI Digital</span>
+        </header>
+        <div style={{ padding: '32px 20px', display: 'flex', justifyContent: 'center' }}>
+          <div style={{ width: '100%', maxWidth: '350px', background: '#fff', borderRadius: '16px', padding: '24px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+            <div style={{ width: '52px', height: '52px', borderRadius: '50%', margin: '0 auto 14px', background: '#fff3e0', color: '#e65100', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Bell size={24} />
+            </div>
+            <h2 style={{ margin: '0 0 8px', fontSize: '18px', color: '#212121', fontFamily: SYS_FONT }}>El acceso a tu DNI venció</h2>
+            <p style={{ margin: '0 0 20px', fontSize: '14px', lineHeight: 1.5, color: '#666', fontFamily: SYS_FONT }}>Tu token cumplió las 24 horas. Podés activar otro desde la sección Tina.</p>
+            <button onClick={() => setView('tina')} style={{ width: '100%', border: 'none', borderRadius: '10px', background: '#362FC1', color: '#fff', padding: '13px 16px', fontSize: '15px', fontWeight: 600, fontFamily: SYS_FONT, cursor: 'pointer' }}>
+              Ir a Tina
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const fullName = `${dni.apellido} ${dni.nombre}`.split(' ').map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
 
