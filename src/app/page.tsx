@@ -2773,7 +2773,7 @@ function VehiculosView() {
 // TINA VIEW
 // ========================================
 function TinaView() {
-  const { setView, user, setUser } = useAppStore();
+  const { setView, setMenuOpen, user, setUser } = useAppStore();
   const [selectedPack, setSelectedPack] = useState<'1' | '5'>('1');
   const [loading, setLoading] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
@@ -2916,6 +2916,25 @@ function TinaView() {
       </header>
 
       <div style={{ padding: '16px', maxWidth: '550px', margin: '0 auto' }}>
+        {user && (
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: '#eef0ff', border: '1px solid #d7d4ff', borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>
+            <FileText size={21} color="#362FC1" style={{ flexShrink: 0, marginTop: '2px' }} />
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 700, color: '#292477', fontFamily: SYS_FONT }}>
+                ¿Necesitás modificar los datos de tu documento?
+              </p>
+              <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.45, color: '#555', fontFamily: SYS_FONT }}>
+                Desde Inicio, abrí el menú ☰ de arriba a la izquierda y elegí «Editar Datos».
+              </p>
+              <button
+                onClick={() => { setView('home'); setMenuOpen(true); }}
+                style={{ marginTop: '10px', padding: '8px 12px', border: 'none', borderRadius: '8px', background: '#362FC1', color: '#fff', fontSize: '13px', fontWeight: 600, fontFamily: SYS_FONT, cursor: 'pointer' }}
+              >
+                Editar datos
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Token Balance Card */}
         {user ? (
