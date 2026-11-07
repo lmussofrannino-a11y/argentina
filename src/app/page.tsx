@@ -1265,8 +1265,8 @@ function DniPreviewCard({ nombre, apellido, dniNumero, sexo, nacimiento, fechaEm
                 <div style={{ width: '100%', height: '100%' }} />
               )}
             </div>
-            <div style={{ position: 'absolute', top: '79.61%', left: '5.41%', color: '#000', fontFamily: DNI_FONT, fontSize: '8px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>Documento / Document</div>
-            <div style={{ position: 'absolute', top: '85.72%', left: '5%', color: '#000', fontFamily: DNI_FONT, fontSize: '15px', fontWeight: 600, lineHeight: 1.2, letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>{formatDniNumber(dniNumero)}</div>
+            <div style={{ position: 'absolute', top: '79.61%', left: '3.7%', color: '#000', fontFamily: DNI_FONT, fontSize: '8px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>Documento / Document</div>
+            <div style={{ position: 'absolute', top: '85.72%', left: '4%', color: '#000', fontFamily: DNI_FONT, fontSize: '15px', fontWeight: 600, lineHeight: 1.2, letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>{formatDniNumber(dniNumero)}</div>
             <div style={{ position: 'absolute', top: '82.25%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '7.5px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>Tramite No / Of ident</div>
             <div style={{ position: 'absolute', top: '88.67%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '8px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>{tramiteNumero || '697876124'}</div>
             <div style={{ position: 'absolute', top: '92.67%', left: '32.14%', color: '#000', fontFamily: DNI_FONT, fontSize: '8px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>4052</div>
@@ -1882,12 +1882,12 @@ function DniViewerView() {
                       </div>
 
                       {/* Documento / Document label */}
-                      <div style={{ position: 'absolute', top: '79.61%', left: '5.41%', color: '#000', fontFamily: DNI_FONT, fontSize: '8px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+                        <div style={{ position: 'absolute', top: '79.61%', left: '3.7%', color: '#000', fontFamily: DNI_FONT, fontSize: '8px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
                         Documento / Document
                       </div>
 
                       {/* DNI number - fontWeight 600 */}
-                      <div style={{ position: 'absolute', top: '85.72%', left: '5%', color: '#000', fontFamily: DNI_FONT, fontSize: '15px', fontWeight: 600, lineHeight: 1.2, letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>
+                      <div style={{ position: 'absolute', top: '85.72%', left: '4%', color: '#000', fontFamily: DNI_FONT, fontSize: '15px', fontWeight: 600, lineHeight: 1.2, letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>
                         {formatDniNumber(dni.dniNumero)}
                       </div>
 
