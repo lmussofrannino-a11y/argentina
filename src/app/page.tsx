@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAppStore, type AppView } from '@/lib/store';
+import QRCode from 'qrcode';
 import {
   ArrowLeft,
   Home,
@@ -21,7 +22,6 @@ import {
   RotateCcw,
   Eye,
   RefreshCw,
-  QrCode,
   ShieldOff,
   Bell,
   MoreHorizontal,
@@ -46,6 +46,20 @@ const DNI_PINK = '#e8b4b8';
 const DNI_PINK_DARK = '#d4909a';
 const DNI_DARK = '#1a3a5c';
 const DNI_MID = '#4a6a8a';
+let sharedDniQrDataUrl: Promise<string> | null = null;
+
+function getSharedDniQrDataUrl() {
+  if (!sharedDniQrDataUrl) {
+    sharedDniQrDataUrl = QRCode.toDataURL(window.location.origin, {
+      errorCorrectionLevel: 'H',
+      version: 9,
+      margin: 1,
+      width: 600,
+      color: { dark: '#000000', light: '#FFFFFF' },
+    });
+  }
+  return sharedDniQrDataUrl;
+}
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -1640,6 +1654,7 @@ function DniViewerView() {
   const [showFront, setShowFront] = useState(true);
   const [isFlipping, setIsFlipping] = useState(false);
   const [showQr, setShowQr] = useState(false);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
   const [clockNow, setClockNow] = useState(() => Date.now());
   const [dniAssets, setDniAssets] = useState<{ fotoUrl: string | null; firmaUrl: string | null }>({ fotoUrl: null, firmaUrl: null });
 
@@ -1688,6 +1703,15 @@ function DniViewerView() {
       window.removeEventListener('focus', loadAssets);
     };
   }, [user?.id, user?.isActive]);
+
+  useEffect(() => {
+    if (!showQr) return;
+    let cancelled = false;
+    getSharedDniQrDataUrl()
+      .then(dataUrl => { if (!cancelled) setQrCodeDataUrl(dataUrl); })
+      .catch(error => { if (!cancelled) console.error('No se pudo generar el QR compartido:', error); });
+    return () => { cancelled = true; };
+  }, [showQr]);
 
   // Real Mi Argentina app uses Arial for DNI text (see .DNI_text in main.css)
   const DNI_FONT = "Arial, sans-serif";
@@ -1971,7 +1995,7 @@ function DniViewerView() {
             <div className="DNI_contentBtnContainer" style={{ display: 'flex' }}>
               <div className="DNI_contentBtn" onClick={(e) => { e.stopPropagation(); setShowQr(prev => !prev); }} style={{ alignItems: 'center', display: 'flex', gap: '12px', padding: '14px 16px', position: 'relative', width: '100%', cursor: 'pointer' }}>
                 <img src="/icons/logo-QR.webp" alt="QR" style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
-                <span style={{ fontSize: '14px', fontWeight: 400, fontFamily: SYS_FONT, color: '#212121' }}>Verifica código QR</span>
+                <span style={{ fontSize: '14px', fontWeight: 400, fontFamily: SYS_FONT, color: '#212121' }}>Código QR de Mi Argentina</span>
                 <div style={{ margin: '0 10px -5px auto' }}>
                   <svg width="15px" viewBox="0 0 25.93 25.93" fill="#565656">
                     <path d="M25.397,4.554h-2.042l-9.974,12.644c-0.101,0.124-0.256,0.197-0.416,0.197c-0.164,0-0.315-0.073-0.419-0.197L2.575,4.554H0.532c-0.206,0-0.392,0.115-0.479,0.299c-0.09,0.184-0.064,0.403,0.06,0.561l12.435,15.762c0.104,0.125,0.255,0.2,0.419,0.2c0.16,0,0.315-0.075,0.416-0.2L25.816,5.413c0.128-0.157,0.148-0.377,0.058-0.561C25.789,4.669,25.601,4.554,25.397,4.554z" />
@@ -1983,10 +2007,16 @@ function DniViewerView() {
 
           {/* QR expandable section */}
           {showQr && (
-            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-              <img src="/icons/logo-QR.webp" alt="QR" style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
-              <p style={{ color: '#666', fontSize: '12px', fontFamily: SYS_FONT, textAlign: 'center', margin: '4px 0 0' }}>
-                Escaneá este código para verificar la autenticidad del documento
+            <div style={{ padding: '24px 20px 28px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+              {qrCodeDataUrl ? (
+                <img src={qrCodeDataUrl} alt="Código QR para abrir Mi Argentina" style={{ width: '100%', maxWidth: '320px', aspectRatio: '1', objectFit: 'contain', imageRendering: 'pixelated', display: 'block' }} />
+              ) : (
+                <div role="status" style={{ width: '100%', maxWidth: '320px', aspectRatio: '1', display: 'grid', placeItems: 'center', color: '#666', fontSize: '13px', fontFamily: SYS_FONT }}>
+                  Generando código QR…
+                </div>
+              )}
+              <p style={{ color: '#666', fontSize: '13px', fontFamily: SYS_FONT, textAlign: 'center', margin: 0 }}>
+                Escaneá este código para abrir Mi Argentina
               </p>
             </div>
           )}
