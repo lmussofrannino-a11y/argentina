@@ -26,7 +26,7 @@ export interface UserData {
   dni: DniData | null;
 }
 
-export type AppView = 'login' | 'register' | 'home' | 'documentos' | 'dni-viewer' | 'admin' | 'novedades' | 'telefonos' | 'trabajo' | 'vehiculos' | 'salud' | 'cobros' | 'hijos' | 'tramites' | 'tina';
+export type AppView = 'login' | 'register' | 'home' | 'install-guide' | 'documentos' | 'dni-viewer' | 'admin' | 'novedades' | 'telefonos' | 'trabajo' | 'vehiculos' | 'salud' | 'cobros' | 'hijos' | 'tramites' | 'tina';
 
 interface AppState {
   view: AppView;
@@ -72,12 +72,13 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'mi-argentina-session', // localStorage key
-      version: 2,
+      version: 3,
       migrate: (persistedState) => {
         const state = persistedState as Partial<AppState>;
-        if (!state.user) return { view: state.view ?? 'login', user: null };
+        const persistedView = state.view === 'install-guide' ? 'home' : (state.view ?? 'login');
+        if (!state.user) return { view: persistedView, user: null };
         return {
-          view: state.view ?? 'login',
+          view: persistedView,
           user: {
             ...state.user,
             dni: state.user.dni ? { ...state.user.dni, foto: null as null, firma: null as null } : null,
@@ -85,7 +86,7 @@ export const useAppStore = create<AppState>()(
         };
       },
       partialize: (state) => ({
-        view: state.view,
+        view: state.view === 'install-guide' ? 'home' : state.view,
         user: state.user ? {
           ...state.user,
           dni: state.user.dni ? { ...state.user.dni, foto: null, firma: null } : null,

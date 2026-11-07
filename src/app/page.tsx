@@ -31,6 +31,9 @@ import {
   Timer,
   Zap,
   CreditCard,
+  Download,
+  Share,
+  Smartphone,
 } from 'lucide-react';
 
 // ========================================
@@ -43,6 +46,13 @@ const DNI_PINK = '#e8b4b8';
 const DNI_PINK_DARK = '#d4909a';
 const DNI_DARK = '#1a3a5c';
 const DNI_MID = '#4a6a8a';
+
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+};
+
+type InstallPlatform = 'ios' | 'android' | 'other';
 
 const MONTHS_ES = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
 const MONTHS_EN = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
@@ -374,6 +384,54 @@ function MercosurLogo({ size = 20 }: { size?: number }) {
 // ========================================
 export default function MiArgentinaApp() {
   const { view, _hasHydrated, user, setUser, setView } = useAppStore();
+  const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isAppInstalled, setIsAppInstalled] = useState(false);
+
+  useEffect(() => {
+    const isStandalone = () => (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (navigator as Navigator & { standalone?: boolean }).standalone === true
+    );
+    const syncInstalledState = () => setIsAppInstalled(isStandalone());
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setDeferredInstallPrompt(event as BeforeInstallPromptEvent);
+    };
+    const handleAppInstalled = () => {
+      setIsAppInstalled(true);
+      setDeferredInstallPrompt(null);
+      if (useAppStore.getState().view === 'install-guide') setView('home');
+    };
+    const displayMode = window.matchMedia('(display-mode: standalone)');
+
+    syncInstalledState();
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+    displayMode.addEventListener('change', syncInstalledState);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+      displayMode.removeEventListener('change', syncInstalledState);
+    };
+  }, [setView]);
+
+  const handleInstallApp = async () => {
+    if (!deferredInstallPrompt) return false;
+    const installEvent = deferredInstallPrompt;
+    setDeferredInstallPrompt(null);
+    try {
+      await installEvent.prompt();
+      const choice = await installEvent.userChoice;
+      if (choice.outcome === 'accepted') {
+        setIsAppInstalled(true);
+        setView('home');
+        return true;
+      }
+    } catch (error) {
+      console.error('No se pudo abrir el aviso de instalación:', error);
+    }
+    return false;
+  };
 
   useEffect(() => {
     const hide = () => {
@@ -520,6 +578,13 @@ export default function MiArgentinaApp() {
       <div className="w-full" style={{ maxWidth: '390px', overflow: 'hidden', minHeight: '100vh', position: 'relative' }}>
         {view === 'login' && <LoginView />}
         {view === 'register' && <RegisterView />}
+        {view === 'install-guide' && (
+          <InstallGuideView
+            isInstalled={isAppInstalled}
+            canInstall={Boolean(deferredInstallPrompt)}
+            onInstall={handleInstallApp}
+          />
+        )}
         {view === 'home' && <HomeView />}
         {view === 'documentos' && <DocumentosView />}
         {view === 'dni-viewer' && <DniViewerView />}
@@ -532,7 +597,13 @@ export default function MiArgentinaApp() {
         {view === 'tramites' && <TramitesView />}
         {view === 'trabajo' && <TrabajoView />}
         {view === 'vehiculos' && <VehiculosView />}
-        {view === 'tina' && <TinaView />}
+        {view === 'tina' && (
+          <TinaView
+            isAppInstalled={isAppInstalled}
+            canInstall={Boolean(deferredInstallPrompt)}
+            onInstall={handleInstallApp}
+          />
+        )}
         <EditMenu />
       </div>
     </div>
@@ -1015,7 +1086,7 @@ function RegisterView() {
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Error al registrarse'); return; }
       setUser(data.user);
-      setView('home');
+      setView('install-guide');
     } catch { setError('Error de conexión'); }
     finally { setLoading(false); }
   };
@@ -2769,10 +2840,147 @@ function VehiculosView() {
   );
 }
 
+function getInstallPlatform(): InstallPlatform {
+  const userAgent = navigator.userAgent.toLowerCase();
+  const isIPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+  if (/iphone|ipad|ipod/.test(userAgent) || isIPadOS) return 'ios';
+  if (/android/.test(userAgent)) return 'android';
+  return 'other';
+}
+
+function InstallGuideView({
+  isInstalled,
+  canInstall,
+  onInstall,
+}: {
+  isInstalled: boolean;
+  canInstall: boolean;
+  onInstall: () => Promise<boolean>;
+}) {
+  const { setView } = useAppStore();
+  const [platform, setPlatform] = useState<InstallPlatform>('other');
+  const [installing, setInstalling] = useState(false);
+  const [promptDismissed, setPromptDismissed] = useState(false);
+
+  useEffect(() => {
+    setPlatform(getInstallPlatform());
+  }, []);
+
+  const handleInstall = async () => {
+    setInstalling(true);
+    try {
+      const accepted = await onInstall();
+      setPromptDismissed(!accepted);
+    } finally {
+      setInstalling(false);
+    }
+  };
+
+  const showIOS = platform === 'ios' || platform === 'other';
+  const showAndroid = platform === 'android' || platform === 'other';
+
+  return (
+    <div style={{ background: '#f0f0f0', minHeight: '100vh', paddingBottom: '24px' }}>
+      <header style={{ background: '#362FC1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '55px 16px 16px' }}>
+        <button
+          onClick={() => setView('home')}
+          aria-label="Cerrar y continuar a Inicio"
+          style={{ minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: 0 }}
+        >
+          <X size={24} />
+        </button>
+        <span style={{ color: '#fff', fontSize: '17px', fontWeight: 600, fontFamily: SYS_FONT }}>Agregar como app</span>
+        <div style={{ width: '44px' }} />
+      </header>
+
+      <main style={{ padding: '20px 16px', maxWidth: '550px', margin: '0 auto' }}>
+        <section style={{ background: '#fff', borderRadius: '16px', padding: '22px 18px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '16px' }}>
+          <div style={{ width: '54px', height: '54px', borderRadius: '16px', background: '#eeedff', color: '#362FC1', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '14px' }}>
+            <Smartphone size={28} aria-hidden="true" />
+          </div>
+          <h1 style={{ margin: '0 0 8px', fontSize: '21px', lineHeight: 1.25, fontWeight: 700, color: '#212121', fontFamily: SYS_FONT }}>
+            Tené Mi Argentina a mano
+          </h1>
+          <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.55, color: '#5f6368', fontFamily: SYS_FONT }}>
+            Agregala a la pantalla de inicio para abrirla desde un ícono, como una app.
+          </p>
+          {isInstalled && (
+            <div role="status" style={{ marginTop: '14px', background: '#e8f5e9', border: '1px solid #a5d6a7', borderRadius: '10px', padding: '11px 12px', color: '#256b2b', fontSize: '13px', lineHeight: 1.45, fontFamily: SYS_FONT }}>
+              Este dispositivo ya está usando Mi Argentina como app.
+            </div>
+          )}
+        </section>
+
+        {showAndroid && (
+          <section style={{ background: '#fff', borderRadius: '16px', padding: '20px 18px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '16px' }}>
+            <h2 style={{ margin: '0 0 8px', fontSize: '17px', fontWeight: 700, color: '#212121', fontFamily: SYS_FONT }}>Android</h2>
+            <p style={{ margin: '0 0 14px', fontSize: '13px', lineHeight: 1.5, color: '#5f6368', fontFamily: SYS_FONT }}>
+              Podés instalarla con el aviso del navegador o desde el menú de Chrome.
+            </p>
+            {canInstall && (
+              <button
+                onClick={handleInstall}
+                disabled={installing}
+                style={{ width: '100%', minHeight: '48px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', border: 'none', borderRadius: '10px', background: installing ? '#7772d5' : '#362FC1', color: '#fff', fontSize: '14px', fontWeight: 600, fontFamily: SYS_FONT, cursor: installing ? 'wait' : 'pointer', marginBottom: '14px' }}
+              >
+                <Download size={18} aria-hidden="true" />
+                {installing ? 'Abriendo instalación…' : 'Instalar app'}
+              </button>
+            )}
+            {promptDismissed && (
+              <p role="status" style={{ margin: '0 0 12px', fontSize: '13px', lineHeight: 1.45, color: '#5f6368', fontFamily: SYS_FONT }}>
+                No pasa nada; también podés agregarla desde el menú de Chrome.
+              </p>
+            )}
+            <ol style={{ margin: 0, paddingLeft: '22px', display: 'grid', gap: '8px', fontSize: '13px', lineHeight: 1.5, color: '#424242', fontFamily: SYS_FONT }}>
+              <li>En Chrome, tocá el menú ⋮ de la esquina superior.</li>
+              <li>Elegí «Instalar app» o «Agregar a pantalla de inicio».</li>
+              <li>Confirmá con «Instalar» o «Agregar».</li>
+            </ol>
+          </section>
+        )}
+
+        {showIOS && (
+          <section style={{ background: '#fff', borderRadius: '16px', padding: '20px 18px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '16px' }}>
+            <h2 style={{ margin: '0 0 8px', fontSize: '17px', fontWeight: 700, color: '#212121', fontFamily: SYS_FONT }}>iPhone</h2>
+            <p style={{ margin: '0 0 14px', fontSize: '13px', lineHeight: 1.5, color: '#5f6368', fontFamily: SYS_FONT }}>
+              En iPhone, agregala manualmente desde Safari:
+            </p>
+            <ol style={{ margin: 0, paddingLeft: '22px', display: 'grid', gap: '8px', fontSize: '13px', lineHeight: 1.5, color: '#424242', fontFamily: SYS_FONT }}>
+              <li>Abrí esta página en Safari.</li>
+              <li style={{ paddingLeft: '2px' }}>Tocá Compartir <Share size={15} aria-hidden="true" style={{ verticalAlign: 'middle' }} />.</li>
+              <li>Deslizá las acciones y elegí «Agregar a pantalla de inicio».</li>
+              <li>Si aparece «Abrir como app web», activalo y tocá «Agregar».</li>
+            </ol>
+            <p style={{ margin: '12px 0 0', fontSize: '12px', lineHeight: 1.45, color: '#777', fontFamily: SYS_FONT }}>
+              Si no ves esa opción, bajá hasta «Editar acciones» y agregala a la lista.
+            </p>
+          </section>
+        )}
+
+        <button
+          onClick={() => setView('home')}
+          style={{ width: '100%', minHeight: '48px', border: '1px solid #362FC1', borderRadius: '10px', background: '#fff', color: '#362FC1', fontSize: '14px', fontWeight: 600, fontFamily: SYS_FONT, cursor: 'pointer' }}
+        >
+          Listo, ir a Inicio
+        </button>
+      </main>
+    </div>
+  );
+}
+
 // ========================================
 // TINA VIEW
 // ========================================
-function TinaView() {
+function TinaView({
+  isAppInstalled,
+  canInstall,
+  onInstall,
+}: {
+  isAppInstalled: boolean;
+  canInstall: boolean;
+  onInstall: () => Promise<boolean>;
+}) {
   const { setView, setMenuOpen, user, setUser } = useAppStore();
   const [selectedPack, setSelectedPack] = useState<'1' | '5'>('1');
   const [loading, setLoading] = useState(false);
@@ -2916,6 +3124,28 @@ function TinaView() {
       </header>
 
       <div style={{ padding: '16px', maxWidth: '550px', margin: '0 auto' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: '#eef0ff', border: '1px solid #d7d4ff', borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>
+          <Smartphone size={21} color="#362FC1" aria-hidden="true" style={{ flexShrink: 0, marginTop: '2px' }} />
+          <div style={{ flex: 1 }}>
+            <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 700, color: '#292477', fontFamily: SYS_FONT }}>
+              {isAppInstalled ? 'Mi Argentina ya está instalada' : 'Agregá Mi Argentina a tu pantalla de inicio'}
+            </p>
+            <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.45, color: '#555', fontFamily: SYS_FONT }}>
+              Consultá cómo abrirla desde el celular como una app.
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' }}>
+              {canInstall && !isAppInstalled && (
+                <button onClick={() => { void onInstall(); }} style={{ minHeight: '42px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 12px', border: 'none', borderRadius: '8px', background: '#362FC1', color: '#fff', fontSize: '13px', fontWeight: 600, fontFamily: SYS_FONT, cursor: 'pointer' }}>
+                  <Download size={16} aria-hidden="true" /> Instalar app
+                </button>
+              )}
+              <button onClick={() => setView('install-guide')} style={{ minHeight: '42px', padding: '8px 12px', border: '1px solid #362FC1', borderRadius: '8px', background: '#fff', color: '#362FC1', fontSize: '13px', fontWeight: 600, fontFamily: SYS_FONT, cursor: 'pointer' }}>
+                Ver instrucciones
+              </button>
+            </div>
+          </div>
+        </div>
+
         {user && (
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: '#eef0ff', border: '1px solid #d7d4ff', borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>
             <FileText size={21} color="#362FC1" style={{ flexShrink: 0, marginTop: '2px' }} />
