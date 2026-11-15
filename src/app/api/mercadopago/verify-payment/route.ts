@@ -25,7 +25,7 @@ async function verifyPendingOrder(userId: string, requestedOrderId: unknown) {
   if (!order) return NextResponse.json({ error: 'No se encontró una orden pendiente' }, { status: 404 })
 
   if (order.status === 'paid') {
-    const processed = await db.processedPayment.findUnique({ where: { orderId: order.id } })
+    const processed = await db.processedPayment.findFirst({ where: { orderId: order.id } })
     const user = await db.user.findUnique({ where: { id: userId }, select: { tokens: true, tokenDebt: true } })
     return NextResponse.json({
       success: true,

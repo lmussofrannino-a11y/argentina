@@ -25,7 +25,7 @@ ALTER TABLE "User" ADD COLUMN "tokenDebt" INTEGER NOT NULL DEFAULT 0;
 CREATE UNIQUE INDEX "PaymentOrder_preferenceId_key" ON "PaymentOrder"("preferenceId");
 CREATE UNIQUE INDEX "PaymentOrder_paymentId_key" ON "PaymentOrder"("paymentId");
 CREATE INDEX "PaymentOrder_userId_status_createdAt_idx" ON "PaymentOrder"("userId", "status", "createdAt");
-CREATE UNIQUE INDEX "ProcessedPayment_orderId_key" ON "ProcessedPayment"("orderId");
+CREATE INDEX "ProcessedPayment_orderId_idx" ON "ProcessedPayment"("orderId");
 
 ALTER TABLE "PaymentOrder"
     ADD CONSTRAINT "PaymentOrder_userId_fkey"
