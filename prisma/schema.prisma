@@ -14,17 +14,43 @@ model User {
   isActive   Boolean   @default(false)
   activatedAt DateTime?
   tokens     Int       @default(0)
+  tokenDebt  Int       @default(0)
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   dni              DniData?
   processedPayments ProcessedPayment[]
+  paymentOrders     PaymentOrder[]
 }
 
 model ProcessedPayment {
-  id        String   @id
+  id        String        @id
   userId    String
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId   String?       @unique
+  quantity  Int?
+  amount    Int?
+  currency  String?
+  status    String        @default("approved")
+  createdAt DateTime      @default(now())
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order     PaymentOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+}
+
+model PaymentOrder {
+  id           String            @id @default(cuid())
+  userId       String
+  packId       String
+  quantity     Int
+  amount       Int
+  currency     String            @default("ARS")
+  preferenceId String?           @unique
+  paymentId    String?           @unique
+  status       String            @default("pending")
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  processed    ProcessedPayment?
+
+  @@index([userId, status, createdAt])
 }
 
 model DniData {

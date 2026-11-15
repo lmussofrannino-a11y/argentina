@@ -400,6 +400,7 @@ export default function MiArgentinaApp() {
   const { view, _hasHydrated, user, setUser, setView } = useAppStore();
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isAppInstalled, setIsAppInstalled] = useState(false);
+  const paymentReturnHandled = useRef<string | null>(null);
 
   useEffect(() => {
     const isStandalone = () => (
@@ -457,6 +458,21 @@ export default function MiArgentinaApp() {
     obs.observe(document.body, { childList: true, subtree: true });
     return () => obs.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (!_hasHydrated || !user?.id) return;
+    let cancelled = false;
+
+    fetch(`/api/user/${encodeURIComponent(user.id)}`, { cache: 'no-store' })
+      .then((response) => {
+        if (!cancelled && (response.status === 401 || response.status === 404)) {
+          useAppStore.getState().logout();
+        }
+      })
+      .catch(() => {});
+
+    return () => { cancelled = true; };
+  }, [_hasHydrated, user?.id]);
 
   // Global expiry timer — runs regardless of which view the user is on.
   // The viewer also checks the deadline locally so it can hide the DNI at once,
@@ -547,35 +563,43 @@ export default function MiArgentinaApp() {
     const params = new URLSearchParams(window.location.search)
     const paymentSuccess = params.get('payment_success')
     const paymentFailure = params.get('payment_failure')
+    const paymentPending = params.get('payment_pending')
+    const orderId = params.get('order_id')
 
-    if (paymentSuccess === 'true' && user?.id) {
-      // Verify payment by looking up the user's payments
-      fetch('/api/mercadopago/verify-payment', {
+    if (paymentSuccess === 'true') {
+      if (!user?.id) {
+        // Preserve the order ID until login completes so the return can be verified.
+        setView('login')
+        return
+      }
+
+      const returnKey = `${user.id}:${orderId || ''}`
+      if (paymentReturnHandled.current === returnKey) return
+      paymentReturnHandled.current = returnKey
+
+      const body = orderId ? { orderId } : {}
+      void fetch('/api/mercadopago/verify-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id }),
-      }).then(res => {
-        res.json().then(data => {
-          if (data.success) {
-            setUser({ ...user, tokens: data.tokens })
-          }
-          setView('tina')
-        })
-      }).catch(() => {
+        body: JSON.stringify(body),
+      }).then(async (response) => {
+        const data = await response.json()
+        if (response.ok && data.success) {
+          const latestUser = useAppStore.getState().user
+          if (latestUser?.id === user.id) setUser({ ...latestUser, tokens: data.tokens, tokenDebt: data.tokenDebt })
+        }
+      }).catch(() => {}).finally(() => {
         setView('tina')
+        window.history.replaceState({}, '', window.location.pathname)
       })
-      window.history.replaceState({}, '', window.location.pathname)
-    } else if (paymentSuccess === 'true') {
-      // User not logged in yet, redirect to login first
-      setView('login')
-      window.history.replaceState({}, '', window.location.pathname)
+      return
     }
 
-    if (paymentFailure === 'true') {
+    if (paymentFailure === 'true' || paymentPending === 'true') {
       setView('tina')
       window.history.replaceState({}, '', window.location.pathname)
     }
-  }, []);
+  }, [user?.id, setUser, setView]);
 
   // Wait for Zustand persist to rehydrate from localStorage before rendering
   // This prevents hydration mismatch (server renders 'login', client has 'home')
@@ -625,7 +649,7 @@ export default function MiArgentinaApp() {
 }
 
 function EditMenu() {
-  const { menuOpen, setMenuOpen, user, updateDni } = useAppStore();
+  const { menuOpen, setMenuOpen, user, updateDni, logout } = useAppStore();
   const dni = user?.dni;
 
   const [nombre, setNombre] = useState(dni?.nombre || '');
@@ -817,6 +841,17 @@ function EditMenu() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // Clear the local account even when the browser is offline.
+    } finally {
+      setMenuOpen(false);
+      logout();
+    }
+  };
+
   if (!menuOpen) return null;
 
   return (
@@ -882,6 +917,10 @@ function EditMenu() {
             width: '100%', padding: '10px', background: '#3333cc', color: '#fff', border: 'none',
             borderRadius: '25px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT,
           }}>Guardar</button>
+          <button onClick={handleLogout} style={{
+            width: '100%', padding: '10px', marginTop: '8px', background: '#fff', color: '#b3261e', border: '1px solid #d8b8b5',
+            borderRadius: '25px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT,
+          }}>Cerrar sesión</button>
         </div>
       </div>
     </>
@@ -1404,14 +1443,14 @@ function BottomNavBar({ activeTab }: { activeTab: BottomTab }) {
 // HOME VIEW
 // ========================================
 function HomeView() {
-  const { user, setView, logout } = useAppStore();
+  const { user, setView } = useAppStore();
   const nombre = user?.dni?.nombre || 'Usuario';
   const isActive = user?.isActive ?? false;
   const tapCountRef = useRef(0);
   const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showAdminPrompt, setShowAdminPrompt] = useState(false);
-  const [adminPass, setAdminPass] = useState('');
   const [adminError, setAdminError] = useState('');
+  const [adminLoading, setAdminLoading] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -1428,17 +1467,25 @@ function HomeView() {
       tapCountRef.current = 0;
       if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
       setShowAdminPrompt(true);
-      setAdminPass('');
       setAdminError('');
     }
   };
 
-  const handleAdminLogin = () => {
-    if (adminPass === 'gomitas24') {
-      setShowAdminPrompt(false);
-      setView('admin');
-    } else {
-      setAdminError('Contraseña incorrecta');
+  const handleAdminLogin = async () => {
+    setAdminLoading(true);
+    setAdminError('');
+    try {
+      const response = await fetch('/api/admin/auth');
+      if (response.ok) {
+        setShowAdminPrompt(false);
+        setView('admin');
+      } else {
+        setAdminError('Esta cuenta no tiene permisos de administrador');
+      }
+    } catch {
+      setAdminError('No se pudo verificar la cuenta');
+    } finally {
+      setAdminLoading(false);
     }
   };
 
@@ -1517,24 +1564,15 @@ function HomeView() {
                 <ShieldOff size={24} color="#fff" />
               </div>
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#212121', fontFamily: SYS_FONT }}>Acceso Admin</h3>
-              <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#757575', fontFamily: SYS_FONT }}>Ingresá la contraseña de administrador</p>
+              <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#757575', fontFamily: SYS_FONT }}>El acceso se valida con tu cuenta</p>
             </div>
-            <input
-              type="password"
-              value={adminPass}
-              onChange={(e) => { setAdminPass(e.target.value); setAdminError(''); }}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleAdminLogin(); }}
-              placeholder="Contraseña"
-              autoFocus
-              style={{ width: '100%', padding: '12px 14px', border: adminError ? '2px solid #f44336' : '2px solid #e0e0e0', borderRadius: '10px', fontSize: '16px', fontFamily: SYS_FONT, outline: 'none', boxSizing: 'border-box', marginBottom: '8px' }}
-            />
             {adminError && <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#f44336', fontFamily: SYS_FONT, textAlign: 'center' }}>{adminError}</p>}
             <div style={{ display: 'flex', gap: '10px' }}>
               <button onClick={() => setShowAdminPrompt(false)} style={{ flex: 1, padding: '12px', border: '2px solid #e0e0e0', borderRadius: '10px', background: '#fff', color: '#757575', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT }}>
                 Cancelar
               </button>
-              <button onClick={handleAdminLogin} style={{ flex: 1, padding: '12px', border: 'none', borderRadius: '10px', background: '#362FC1', color: '#fff', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT }}>
-                Entrar
+              <button onClick={handleAdminLogin} disabled={adminLoading} style={{ flex: 1, padding: '12px', border: 'none', borderRadius: '10px', background: '#362FC1', color: '#fff', fontSize: '14px', fontWeight: 600, cursor: adminLoading ? 'wait' : 'pointer', fontFamily: SYS_FONT }}>
+                {adminLoading ? 'Verificando…' : 'Verificar acceso'}
               </button>
             </div>
           </div>
@@ -2078,6 +2116,7 @@ function AdminView() {
     email: string;
     isActive: boolean;
     tokens: number;
+    tokenDebt: number;
     createdAt: string;
     dni: { nombre: string; apellido: string; dniNumero: string } | null;
   }> | null>(null);
@@ -2088,9 +2127,7 @@ function AdminView() {
   const [success, setSuccess] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
-  const ADMIN_KEY = 'gomitas24';
-
-  const filterUsers = (list: { id: string; email: string; isActive: boolean; tokens: number; createdAt: string; dni: { nombre: string; apellido: string; dniNumero: string } | null }[] | null | undefined) => {
+  const filterUsers = (list: { id: string; email: string; isActive: boolean; tokens: number; tokenDebt: number; createdAt: string; dni: { nombre: string; apellido: string; dniNumero: string } | null }[] | null | undefined) => {
     if (!list) return [];
     if (!search.trim()) return list;
     const q = search.toLowerCase().trim();
@@ -2106,9 +2143,7 @@ function AdminView() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/users', {
-        headers: { 'x-admin-key': ADMIN_KEY },
-      });
+      const res = await fetch('/api/admin/users');
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Error al cargar usuarios'); return; }
       setUsers(data.users);
@@ -2128,7 +2163,7 @@ function AdminView() {
     try {
       const res = await fetch('/api/admin/activate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-key': ADMIN_KEY },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, isActive: makeActive }),
       });
       const data = await res.json();
@@ -2157,12 +2192,14 @@ function AdminView() {
     try {
       const res = await fetch('/api/admin/activate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-key': ADMIN_KEY },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, addTokens: amount }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Error al asignar tokens'); return; }
-      setSuccess(`Se asignaron ${amount} token(s) ✓`);
+      setSuccess(data.appliedToDebt
+        ? `Se aplicaron ${data.appliedToDebt} a un ajuste pendiente y se asignaron los restantes ✓`
+        : `Se asignaron ${amount} token(s) ✓`);
       setTokenInputs(prev => ({ ...prev, [userId]: '' }));
 
       if (user && userId === user.id && data.user) {
@@ -2187,7 +2224,7 @@ function AdminView() {
     try {
       const res = await fetch('/api/admin/activate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-key': ADMIN_KEY },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, addTokens: -amount }),
       });
       const data = await res.json();
@@ -2277,7 +2314,7 @@ function AdminView() {
                           </p>
                           <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#757575', fontFamily: SYS_FONT }}>{u.email}</p>
                           <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#9e9e9e', fontFamily: SYS_FONT }}>
-                            DNI: {u.dni?.dniNumero || '-'} · Tokens: {u.tokens} · Registrado: {new Date(u.createdAt).toLocaleDateString('es')}
+                             DNI: {u.dni?.dniNumero || '-'} · Tokens: {u.tokens}{u.tokenDebt > 0 ? ` · Ajuste: ${u.tokenDebt}` : ''} · Registrado: {new Date(u.createdAt).toLocaleDateString('es')}
                           </p>
                           <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
                             <input
@@ -3069,20 +3106,10 @@ function TinaView({
     setError(null)
     setMessage(null)
     try {
-      const quantity = selectedPack === '1' ? 1 : 5
-      const unitPrice = selectedPack === '1' ? 3000 : 12000
-      const title = selectedPack === '1' ? '1 Token miArgentina' : '5 Tokens miArgentina'
-
       const res = await fetch('/api/mercadopago/create-preference', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id,
-          email: user.email,
-          title,
-          quantity,
-          unitPrice,
-        }),
+        body: JSON.stringify({ pack: selectedPack }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.detail || data.error || 'Error al crear el pago'); return }
@@ -3131,12 +3158,16 @@ function TinaView({
       const res = await fetch('/api/mercadopago/verify-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id }),
+        body: JSON.stringify({}),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'No se encontró un pago aprobado'); return }
-      setUser({ ...user, tokens: data.tokens })
-      setMessage(`Pago verificado! Se acreditaron ${data.quantity} token(s).`)
+      setUser({ ...user, tokens: data.tokens, tokenDebt: data.tokenDebt })
+      setMessage(data.tokenDebt > 0
+        ? 'Pago verificado. Se aplicó el paquete a regularizar un ajuste pendiente.'
+        : typeof data.tokensAdded === 'number' && data.tokensAdded < data.quantity
+          ? `Pago verificado. Quedaron ${data.tokensAdded} token(s) disponibles después de regularizar el ajuste.`
+          : `Pago verificado! Se acreditaron ${data.quantity} token(s).`)
       setTimeout(() => setMessage(null), 5000)
     } catch {
       setError('Error de conexión')
@@ -3212,6 +3243,14 @@ function TinaView({
               tokens disponibles
             </p>
 
+            {(user.tokenDebt ?? 0) > 0 && (
+              <div role="status" style={{ marginTop: '16px', background: '#fff8e1', borderRadius: '12px', padding: '12px', border: '1px solid #ffe082' }}>
+                <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.5, color: '#8a5200', fontFamily: SYS_FONT }}>
+                  Tenés un ajuste pendiente de {user.tokenDebt} token(es). Las próximas compras se aplicarán primero a regularizarlo.
+                </p>
+              </div>
+            )}
+
             {/* Active status & timer */}
             {user.isActive && remainingTime && (
               <div style={{ marginTop: '16px', background: '#e8f5e9', borderRadius: '12px', padding: '12px', border: '1px solid #a5d6a7' }}>
@@ -3230,7 +3269,7 @@ function TinaView({
               </div>
             )}
 
-            {!user.isActive && user.tokens > 0 && (
+            {!user.isActive && user.tokens > 0 && (user.tokenDebt ?? 0) === 0 && (
               <div style={{ marginTop: '16px' }}>
                 <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#757575', fontFamily: SYS_FONT }}>
                   Tenés tokens disponibles. Activá uno para ver tu documento.
@@ -3251,7 +3290,9 @@ function TinaView({
             {!user.isActive && user.tokens === 0 && (
               <div style={{ marginTop: '12px', background: '#fff8e1', borderRadius: '8px', padding: '10px', border: '1px solid #ffe082' }}>
                 <p style={{ margin: 0, fontSize: '12px', color: '#e65100', fontFamily: SYS_FONT }}>
-                  No tenés tokens. Comprá un pack para activar tu documento.
+                  {(user.tokenDebt ?? 0) > 0
+                    ? 'No tenés tokens disponibles. Comprá un pack para regularizar el ajuste pendiente.'
+                    : 'No tenés tokens. Comprá un pack para activar tu documento.'}
                 </p>
               </div>
             )}

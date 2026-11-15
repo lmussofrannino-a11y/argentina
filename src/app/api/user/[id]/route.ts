@@ -1,6 +1,7 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 import { dniPublicSelect, withoutDniImages } from '@/lib/dni-response'
+import { getSessionUserId } from '@/lib/auth'
 
 export async function GET(
   request: NextRequest,
@@ -16,6 +17,10 @@ export async function GET(
       )
     }
 
+    if (getSessionUserId(request) !== id) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+
     // Don't consume token on user info fetch - only when using DNI
     const user = await db.user.findUnique({
       where: { id },
@@ -24,6 +29,7 @@ export async function GET(
         email: true,
         isActive: true,
         tokens: true,
+        tokenDebt: true,
         activatedAt: true,
         dni: { select: dniPublicSelect },
       },
@@ -40,7 +46,7 @@ export async function GET(
 
     return NextResponse.json(
       { user: updatedUser },
-      { status: 200 }
+      { status: 200, headers: { 'Cache-Control': 'private, no-store, max-age=0' } }
     )
   } catch (error) {
     console.error('Error al obtener usuario:', error)

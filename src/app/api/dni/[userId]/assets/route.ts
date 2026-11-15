@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { createDniImageUrl } from '@/lib/r2-dni-images'
+import { getSessionUserId } from '@/lib/auth'
 
 async function resolveImageUrl(storageKey: string | null, legacyDataUrl: string | null) {
   if (!storageKey) return legacyDataUrl
@@ -22,14 +23,18 @@ export async function GET(
     if (!userId) {
       return NextResponse.json({ error: 'ID de usuario requerido' }, { status: 400 })
     }
+    if (getSessionUserId(_request) !== userId) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
 
     const user = await db.user.findUnique({
       where: { id: userId },
-      select: { isActive: true, activatedAt: true },
+      select: { isActive: true, activatedAt: true, tokenDebt: true },
     })
     if (!user) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     if (
       !user.isActive ||
+      user.tokenDebt > 0 ||
       (user.activatedAt && Date.now() >= user.activatedAt.getTime() + 24 * 60 * 60 * 1000)
     ) {
       return NextResponse.json(

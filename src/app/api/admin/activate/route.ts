@@ -1,21 +1,21 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 import { dniPublicSelect, withoutDniImages } from '@/lib/dni-response'
+import { isAdminRequest } from '@/lib/auth'
 
 const userPayloadSelect = {
   id: true,
   email: true,
   isActive: true,
   tokens: true,
+  tokenDebt: true,
   activatedAt: true,
   dni: { select: dniPublicSelect },
 } as const
 
 export async function POST(request: NextRequest) {
   try {
-    const adminKey = request.headers.get('x-admin-key')
-
-    if (adminKey !== 'gomitas24') {
+    if (!(await isAdminRequest(request))) {
       return NextResponse.json(
         { error: 'No autorizado' },
         { status: 401 }
@@ -46,16 +46,19 @@ export async function POST(request: NextRequest) {
         )
       }
       
-      const newTokens = Math.max(0, existingUser.tokens + addTokens)
+      const debtPaid = addTokens > 0 ? Math.min(existingUser.tokenDebt, addTokens) : 0
+      const tokenChange = addTokens > 0 ? addTokens - debtPaid : addTokens
+      const newTokens = Math.max(0, existingUser.tokens + tokenChange)
       const updated = await db.user.update({
         where: { id: userId },
-        data: { tokens: newTokens },
+        data: { tokens: newTokens, tokenDebt: { decrement: debtPaid } },
         select: userPayloadSelect,
       })
       const action = addTokens > 0 ? 'agregaron' : 'quitaron'
       return NextResponse.json(
         {
           message: `Se ${action} ${Math.abs(addTokens)} token(s). Total: ${updated.tokens}`,
+          appliedToDebt: debtPaid,
           user: withoutDniImages(updated),
         },
         { status: 200 }
@@ -68,6 +71,10 @@ export async function POST(request: NextRequest) {
         { error: 'isActive (boolean) o addTokens (number) son requeridos' },
         { status: 400 }
       )
+    }
+
+    if (isActive && existingUser.tokenDebt > 0) {
+      return NextResponse.json({ error: 'No se puede activar una cuenta con ajustes de tokens pendientes' }, { status: 409 })
     }
 
     let updatedUser

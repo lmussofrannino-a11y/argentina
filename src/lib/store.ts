@@ -22,6 +22,7 @@ export interface UserData {
   email: string;
   isActive: boolean;
   tokens: number;
+  tokenDebt?: number;
   activatedAt?: string | null;
   dni: DniData | null;
 }

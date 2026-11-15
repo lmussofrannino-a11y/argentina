@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getSessionUserId } from '@/lib/auth'
 
 const TOKEN_DURATION_MS = 24 * 60 * 60 * 1000
 
@@ -12,6 +13,10 @@ export async function POST(req: NextRequest) {
         { error: 'userId y activatedAt son requeridos' },
         { status: 400 }
       )
+    }
+
+    if (getSessionUserId(req) !== userId) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
     const expectedActivation = new Date(activatedAt)

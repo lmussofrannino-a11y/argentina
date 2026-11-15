@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mi-argentina-v6';
+const CACHE_NAME = 'mi-argentina-v7';
 
 // Files to pre-cache for offline support
 const PRE_CACHE_URLS = [
@@ -66,7 +66,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch: network-first for API calls, cache-first for static assets
+// Fetch: API responses may contain account or payment data; never cache them.
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -77,31 +77,9 @@ self.addEventListener('fetch', (event) => {
   // Skip Chrome extension requests
   if (url.protocol === 'chrome-extension:') return;
 
-  // Signed DNI image URLs are private and short-lived; never cache their responses.
-  if (/^\/api\/dni\/[^/]+\/assets$/.test(url.pathname)) {
+  // All API responses are private/dynamic. Never persist them or use offline copies.
+  if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
     event.respondWith(fetch(request, { cache: 'no-store' }));
-    return;
-  }
-
-  // Network-first for API calls
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Cache successful API responses
-          if (response.ok) {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          // Fallback to cache if offline
-          return caches.match(request);
-        })
-    );
     return;
   }
 

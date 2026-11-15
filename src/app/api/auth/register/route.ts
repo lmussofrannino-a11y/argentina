@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'node:crypto'
 import { dniPublicSelect, withoutDniImages } from '@/lib/dni-response'
 import { isR2WriteEnabled, uploadDniImage } from '@/lib/r2-dni-images'
+import { createSessionToken, setSessionCookie } from '@/lib/auth'
+import { hashPassword } from '@/lib/password'
 
 function generateTramiteNumero(): string {
   let result = ''
@@ -54,8 +56,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (
+      typeof email !== 'string' ||
+      typeof password !== 'string' ||
+      password.length > 1024 ||
+      typeof nombre !== 'string' ||
+      typeof apellido !== 'string' ||
+      typeof dniNumero !== 'string' ||
+      typeof domicilio !== 'string' ||
+      typeof nacimiento !== 'string' ||
+      typeof fechaEmision !== 'string' ||
+      typeof sexo !== 'string'
+    ) {
+      return NextResponse.json({ error: 'Los datos enviados no son válidos' }, { status: 400 })
+    }
+
+    const normalizedEmail = email.trim().toLowerCase()
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(normalizedEmail)) {
       return NextResponse.json(
         { error: 'Formato de email inválido' },
         { status: 400 }
@@ -70,7 +89,7 @@ export async function POST(request: NextRequest) {
     }
 
     const existingUser = await db.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
     })
 
     if (existingUser) {
@@ -82,6 +101,8 @@ export async function POST(request: NextRequest) {
 
     const tramiteNumero = providedTramiteNumero || generateTramiteNumero()
     const userId = randomUUID()
+    const sessionToken = createSessionToken(userId)
+    const hashedPassword = await hashPassword(password)
     const useR2 = isR2WriteEnabled()
     const [fotoUpload, firmaUpload] = useR2
       ? await Promise.all([
@@ -93,8 +114,8 @@ export async function POST(request: NextRequest) {
     const user = await db.user.create({
       data: {
         id: userId,
-        email,
-        password,
+        email: normalizedEmail,
+        password: hashedPassword,
         dni: {
           create: {
             nombre,
@@ -118,6 +139,7 @@ export async function POST(request: NextRequest) {
         email: true,
         isActive: true,
         tokens: true,
+        tokenDebt: true,
         activatedAt: true,
         dni: { select: dniPublicSelect },
       },
@@ -125,13 +147,15 @@ export async function POST(request: NextRequest) {
 
     const safeUser = withoutDniImages(user)
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         message: 'Usuario registrado exitosamente',
         user: safeUser,
       },
       { status: 201 }
     )
+    setSessionCookie(response, sessionToken)
+    return response
   } catch (error) {
     console.error('Error en registro:', error)
     return NextResponse.json(

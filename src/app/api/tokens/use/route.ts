@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { consumeTokenIfExpired } from '@/lib/tokens'
+import { getSessionUserId } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,6 +12,10 @@ export async function POST(req: NextRequest) {
         { error: 'userId es requerido' },
         { status: 400 }
       )
+    }
+
+    if (getSessionUserId(req) !== userId) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
     // First consume any expired token
@@ -33,7 +38,7 @@ export async function POST(req: NextRequest) {
 
     // Activate one token atomically (only if tokens > 0)
     const result = await db.user.updateMany({
-      where: { id: userId, tokens: { gt: 0 } },
+      where: { id: userId, tokens: { gt: 0 }, tokenDebt: 0 },
       data: {
         isActive: true,
         activatedAt: new Date(),
@@ -44,13 +49,16 @@ export async function POST(req: NextRequest) {
     if (result.count === 0) {
       const user = await db.user.findUnique({
         where: { id: userId },
-        select: { tokens: true },
+        select: { tokens: true, tokenDebt: true },
       })
       return NextResponse.json(
         {
-          error: 'No tienes tokens disponibles. Comprá tokens en la sección Tina.',
+          error: user?.tokenDebt
+            ? 'Tu cuenta tiene un ajuste de tokens pendiente. Comprá un paquete para regularizarla.'
+            : 'No tienes tokens disponibles. Comprá tokens en la sección Tina.',
           isActive: false,
           tokensLeft: user?.tokens ?? 0,
+          tokenDebt: user?.tokenDebt ?? 0,
         },
         { status: 400 }
       )

@@ -3,12 +3,22 @@ import { db } from './db'
 export async function consumeTokenIfExpired(userId: string): Promise<{ isActive: boolean; tokensLeft: number; expired: boolean }> {
   const user = await db.user.findUnique({
     where: { id: userId },
-    select: { id: true, isActive: true, activatedAt: true, tokens: true },
+    select: { id: true, isActive: true, activatedAt: true, tokens: true, tokenDebt: true },
   })
 
   if (!user) return { isActive: false, tokensLeft: 0, expired: false }
 
   let { isActive, activatedAt, tokens } = user
+
+  if (user.tokenDebt > 0) {
+    if (isActive) {
+      await db.user.updateMany({
+        where: { id: userId, isActive: true, tokenDebt: { gt: 0 } },
+        data: { isActive: false, activatedAt: null },
+      })
+    }
+    return { isActive: false, tokensLeft: tokens, expired: true }
+  }
 
   // If currently active and 24h have passed, expire this token (no decrement — token was consumed at activation)
   if (isActive && activatedAt) {

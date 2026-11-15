@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { consumeTokenIfExpired } from '@/lib/tokens'
 import { dniPublicSelect, withoutDniImages } from '@/lib/dni-response'
 import { isR2WriteEnabled, uploadDniImage } from '@/lib/r2-dni-images'
+import { getSessionUserId } from '@/lib/auth'
 
 async function prepareImageUpdate(
   value: unknown,
@@ -33,6 +34,10 @@ export async function PUT(
         { error: 'ID de usuario requerido' },
         { status: 400 }
       )
+    }
+
+    if (getSessionUserId(request) !== userId) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -102,6 +107,10 @@ export async function GET(
         { error: 'ID de usuario requerido' },
         { status: 400 }
       )
+    }
+
+    if (getSessionUserId(request) !== userId) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
     // Only consume token when actively using the DNI
