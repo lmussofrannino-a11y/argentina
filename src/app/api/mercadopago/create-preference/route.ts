@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
           failure: failureUrl.toString(),
           pending: pendingUrl.toString(),
         },
+        auto_return: 'approved',
         notification_url: `${baseUrl}/api/mercadopago/verify-payment`,
         metadata: { orderId: order.id },
       }),

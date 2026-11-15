@@ -45,6 +45,7 @@ model PaymentOrder {
   amount       Int
   currency     String            @default("ARS")
   preferenceId String?           @unique
+  providerOrderId String?
   paymentId    String?           @unique
   status       String            @default("pending")
   createdAt    DateTime          @default(now())
@@ -53,6 +54,7 @@ model PaymentOrder {
   processed    ProcessedPayment[]
 
   @@index([userId, status, createdAt])
+  @@index([providerOrderId])
 }
 
 model DniData {

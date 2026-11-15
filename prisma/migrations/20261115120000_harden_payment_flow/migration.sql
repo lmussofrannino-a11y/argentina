@@ -6,6 +6,7 @@ CREATE TABLE "PaymentOrder" (
     "amount" INTEGER NOT NULL,
     "currency" TEXT NOT NULL DEFAULT 'ARS',
     "preferenceId" TEXT,
+    "providerOrderId" TEXT,
     "paymentId" TEXT,
     "status" TEXT NOT NULL DEFAULT 'pending',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -23,6 +24,7 @@ ALTER TABLE "ProcessedPayment"
 ALTER TABLE "User" ADD COLUMN "tokenDebt" INTEGER NOT NULL DEFAULT 0;
 
 CREATE UNIQUE INDEX "PaymentOrder_preferenceId_key" ON "PaymentOrder"("preferenceId");
+CREATE INDEX "PaymentOrder_providerOrderId_idx" ON "PaymentOrder"("providerOrderId");
 CREATE UNIQUE INDEX "PaymentOrder_paymentId_key" ON "PaymentOrder"("paymentId");
 CREATE INDEX "PaymentOrder_userId_status_createdAt_idx" ON "PaymentOrder"("userId", "status", "createdAt");
 CREATE INDEX "ProcessedPayment_orderId_idx" ON "ProcessedPayment"("orderId");

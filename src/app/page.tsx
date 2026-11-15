@@ -564,7 +564,7 @@ export default function MiArgentinaApp() {
     const paymentSuccess = params.get('payment_success')
     const paymentFailure = params.get('payment_failure')
     const paymentPending = params.get('payment_pending')
-    const orderId = params.get('order_id')
+    const orderId = params.get('app_order_id') || params.get('order_id')
 
     if (paymentSuccess === 'true') {
       if (!user?.id) {
@@ -3106,14 +3106,14 @@ function TinaView({
     setError(null)
     setMessage(null)
     try {
-      const res = await fetch('/api/mercadopago/create-preference', {
+      const res = await fetch('/api/mercadopago/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pack: selectedPack }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.detail || data.error || 'Error al crear el pago'); return }
-      window.location.href = data.init_point
+      window.location.href = data.checkout_url
     } catch {
       setError('Error de conexión')
     } finally {

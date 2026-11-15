@@ -34,8 +34,11 @@ export async function fetchMercadoPagoPayment(paymentId: string | number): Promi
   return payment as MercadoPagoPayment
 }
 
-export function isValidMercadoPagoWebhook(request: NextRequest, dataId: string): boolean {
-  const secret = process.env.MERCADO_PAGO_WEBHOOK_SECRET
+export function isValidMercadoPagoWebhook(
+  request: NextRequest,
+  dataId: string,
+  secret = process.env.MERCADO_PAGO_WEBHOOK_SECRET,
+): boolean {
   const requestId = request.headers.get('x-request-id')
   const signatureHeader = request.headers.get('x-signature')
   if (!secret || !requestId || !signatureHeader) return false

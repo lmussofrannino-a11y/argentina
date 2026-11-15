@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSessionUserId } from '@/lib/auth'
 import {
+  applyApprovedCheckoutOrder,
+  applyCheckoutOrderReversal,
+  fetchMercadoPagoOrder,
+} from '@/lib/checkout-order-processing'
+import {
   applyApprovedPayment,
   applyLegacyApprovedPayment,
   applyLegacyPaymentReversal,
@@ -35,6 +40,29 @@ async function verifyPendingOrder(userId: string, requestedOrderId: unknown) {
       quantity: processed?.quantity ?? order.quantity,
     })
   }
+
+  if (order.providerOrderId) {
+    const remoteOrder = await fetchMercadoPagoOrder(order.providerOrderId)
+    if (!remoteOrder || remoteOrder.id !== order.providerOrderId) {
+      return NextResponse.json({ error: 'No se pudo consultar la order en Mercado Pago' }, { status: 502 })
+    }
+
+    if (remoteOrder.status === 'processed' && remoteOrder.status_detail === 'accredited') {
+      const result = await applyApprovedCheckoutOrder(remoteOrder)
+      return NextResponse.json(result, { status: result.success ? 200 : 409 })
+    }
+    if (remoteOrder.status === 'refunded' || remoteOrder.status === 'charged_back' || remoteOrder.status_detail === 'partially_refunded') {
+      const result = await applyCheckoutOrderReversal(remoteOrder)
+      return NextResponse.json(result, { status: result.success ? 200 : 409 })
+    }
+    return NextResponse.json({
+      error: 'El pago todavía no está aprobado',
+      status: remoteOrder.status,
+      status_detail: remoteOrder.status_detail,
+      success: false,
+    }, { status: 409 })
+  }
+
   if (order.status !== 'pending' || !order.preferenceId) {
     return NextResponse.json({ error: 'La orden no está disponible para verificar' }, { status: 409 })
   }
@@ -117,7 +145,40 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Solicitud no válida' }, { status: 400 })
   }
 
-  const { type, data } = body
+  const type = body.type ?? request.nextUrl.searchParams.get('type')
+  const { data } = body
+  if (type === 'order') {
+    const bodyDataId = data && typeof data === 'object' && 'id' in data
+      ? (data as { id?: unknown }).id
+      : undefined
+    const queryDataId = request.nextUrl.searchParams.get('data.id')
+    const dataId = queryDataId ?? (typeof bodyDataId === 'string' || typeof bodyDataId === 'number' ? String(bodyDataId) : null)
+    if (!dataId) return NextResponse.json({ error: 'Notificación de order no válida' }, { status: 400 })
+
+    const webhookSecret = process.env.MERCADO_PAGO_ORDERS_WEBHOOK_SECRET
+    if (!webhookSecret) {
+      console.error('MERCADO_PAGO_ORDERS_WEBHOOK_SECRET is not configured')
+      return NextResponse.json({ error: 'Webhook de Orders no configurado' }, { status: 503 })
+    }
+    if (!isValidMercadoPagoWebhook(request, dataId, webhookSecret)) {
+      return NextResponse.json({ error: 'Firma de notificación inválida' }, { status: 401 })
+    }
+
+    const order = await fetchMercadoPagoOrder(dataId)
+    if (!order || order.id !== dataId) {
+      return NextResponse.json({ error: 'No se pudo verificar la order en Mercado Pago' }, { status: 502 })
+    }
+
+    if (order.status === 'processed' && order.status_detail === 'accredited') {
+      const result = await applyApprovedCheckoutOrder(order)
+      if (!result.success) console.warn('Mercado Pago order was not credited:', result.message)
+    } else if (order.status === 'refunded' || order.status === 'charged_back' || order.status_detail === 'partially_refunded') {
+      const result = await applyCheckoutOrderReversal(order)
+      if (!result.success) console.warn('Mercado Pago order reversal needs reconciliation:', result.message)
+    }
+    return NextResponse.json({ received: true })
+  }
+
   if (type === 'payment' && data && typeof data === 'object' && 'id' in data) {
     const dataId = (data as { id?: unknown }).id
     if (typeof dataId !== 'string' && typeof dataId !== 'number') {
