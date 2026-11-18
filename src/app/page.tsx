@@ -36,6 +36,7 @@ import {
   Download,
   Share,
   Smartphone,
+  MessageCircle,
 } from 'lucide-react';
 
 // ========================================
@@ -1411,7 +1412,8 @@ function HeaderBar({ onLogoTap, onMenuClick }: { onLogoTap?: () => void; onMenuC
 type BottomTab = 'home' | 'novedades' | 'telefonos' | 'tina';
 
 function BottomNavBar({ activeTab }: { activeTab: BottomTab }) {
-  const { setView } = useAppStore();
+  const { setView, user } = useAppStore();
+  const documentInactive = Boolean(user && !user.isActive);
   const tabs: { key: BottomTab; label: string; icon: string; iconStyle: React.CSSProperties; action: () => void; activeIcon?: string }[] = [
     { key: 'home', label: 'Inicio', icon: '/icons/logo-CASA.webp', iconStyle: { height: '30px', width: '26px' }, action: () => setView('home') },
     { key: 'novedades', label: 'Novedades', icon: '/icons/novedadesGRIS.webp', activeIcon: '/icons/novedadesVIOLETA.webp', iconStyle: { height: '37px', width: '80px', marginLeft: '3px' }, action: () => setView('novedades') },
@@ -1437,12 +1439,24 @@ function BottomNavBar({ activeTab }: { activeTab: BottomTab }) {
       <div style={{ display: 'flex', width: '100%', paddingBottom: '4px' }}>
         {tabs.map((tab) => {
           const isActive = activeTab === tab.key;
+          const needsActivation = tab.key === 'tina' && documentInactive;
           return (
-            <button key={tab.key} onClick={tab.action} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
-              <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img src={isActive && tab.activeIcon ? tab.activeIcon : tab.icon} alt={tab.label} style={{ ...tab.iconStyle, objectFit: 'contain', filter: tab.activeIcon ? 'none' : (isActive ? 'brightness(0) saturate(100%) invert(22%) sepia(95%) saturate(3000%) hue-rotate(240deg)' : 'brightness(0) saturate(0%) invert(46%)') }} />
+            <button
+              key={tab.key}
+              onClick={tab.action}
+              className="bottom-nav-tab"
+              aria-current={isActive ? 'page' : undefined}
+              aria-label={needsActivation ? 'Tina: documento inactivo. Activá tu documento.' : tab.label}
+              title={needsActivation ? 'Documento inactivo: entrá a Tina para activarlo' : undefined}
+              style={{ background: needsActivation ? '#fff0b3' : 'none', border: needsActivation ? '2px solid #e5b349' : '2px solid transparent', borderRadius: '10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', minHeight: '56px', minWidth: 0, flex: 1 }}
+            >
+              <div style={{ height: '37px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                <img src={isActive && tab.activeIcon ? tab.activeIcon : tab.icon} alt="" aria-hidden="true" style={{ ...tab.iconStyle, maxWidth: '100%', objectFit: 'contain', filter: tab.activeIcon ? 'none' : (isActive ? 'brightness(0) saturate(100%) invert(22%) sepia(95%) saturate(3000%) hue-rotate(240deg)' : 'brightness(0) saturate(0%) invert(46%)') }} />
+                {needsActivation && (
+                  <span aria-hidden="true" style={{ position: 'absolute', top: '1px', left: 'calc(50% + 9px)', width: '16px', height: '16px', borderRadius: '50%', background: '#8a4600', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800, fontFamily: SYS_FONT }}>!</span>
+                )}
               </div>
-              <span style={{ fontSize: '12px', color: isActive ? '#362FC1' : '#757575', fontWeight: isActive ? 600 : 400, fontFamily: SYS_FONT }}>{tab.label}</span>
+              <span style={{ fontSize: '12px', color: needsActivation ? '#703c00' : isActive ? '#362FC1' : '#757575', fontWeight: needsActivation || isActive ? 700 : 400, fontFamily: SYS_FONT }}>{tab.label}</span>
             </button>
           );
         })}
@@ -3439,6 +3453,17 @@ function TinaView({
         }}>
           {user ? 'Crear cuenta nueva' : 'Registrarse'}
         </button>
+        <a
+          href="https://wa.me/5492612540869"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="tina-support-link"
+          aria-label="Soporte por WhatsApp (se abre en otra pestaña)"
+          style={{ width: '100%', minHeight: '48px', marginTop: '12px', padding: '14px', borderRadius: '12px', background: '#167744', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '15px', fontWeight: 600, fontFamily: SYS_FONT, textDecoration: 'none' }}
+        >
+          <MessageCircle size={20} aria-hidden="true" />
+          Soporte
+        </a>
       </div>
 
       <BottomNavBar activeTab="tina" />

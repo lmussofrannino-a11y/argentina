@@ -118,6 +118,16 @@ nextjs-portal {
   scrollbar-width: none !important;  /* Firefox */
 }
 
+.bottom-nav-tab:focus-visible,
+.tina-support-link:focus-visible {
+  outline: 3px solid #362fc1;
+  outline-offset: 2px;
+}
+
+.tina-support-link:hover {
+  background: #105c34 !important;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
