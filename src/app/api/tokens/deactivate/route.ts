@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    if (getSessionUserId(req) !== userId) {
+    if (await getSessionUserId(req) !== userId) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 

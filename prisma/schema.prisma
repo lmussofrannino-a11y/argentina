@@ -15,6 +15,7 @@ model User {
   activatedAt DateTime?
   tokens     Int       @default(0)
   tokenDebt  Int       @default(0)
+  isAdmin    Boolean   @default(false)
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   dni              DniData?
@@ -30,6 +31,7 @@ model ProcessedPayment {
   amount    Int?
   currency  String?
   status    String        @default("approved")
+  creditedQuantity Int?   // null = historical credited pack; 0 = reversal recorded before credit
   createdAt DateTime      @default(now())
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   order     PaymentOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
@@ -47,6 +49,10 @@ model PaymentOrder {
   preferenceId String?           @unique
   providerOrderId String?
   paymentId    String?           @unique
+  checkoutUrl  String?
+  creationState String           @default("new")
+  creationStartedAt DateTime?
+  creationPayload Json?
   status       String            @default("pending")
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
@@ -55,6 +61,32 @@ model PaymentOrder {
 
   @@index([userId, status, createdAt])
   @@index([providerOrderId])
+}
+
+model PaymentReconciliationIssue {
+  id         String   @id
+  provider   String
+  resourceId String
+  reason     String
+  status     String   @default("retry")
+  attempts   Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([status, updatedAt])
+}
+
+model RevokedSession {
+  id        String   @id
+  expiresAt DateTime
+  @@index([expiresAt])
+}
+
+model RateLimitBucket {
+  id      String   @id
+  count   Int
+  resetAt DateTime
+  @@index([resetAt])
 }
 
 model DniData {

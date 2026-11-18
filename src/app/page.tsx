@@ -1,5 +1,7 @@
 'use client';
 
+import { getPurchaseAttempt, clearPurchaseAttempts, rememberPaymentOrder, pendingPaymentOrder, clearPendingPaymentOrder } from '@/lib/payment-attempt';
+
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAppStore, type AppView } from '@/lib/store';
 import QRCode from 'qrcode';
@@ -576,6 +578,7 @@ export default function MiArgentinaApp() {
       const returnKey = `${user.id}:${orderId || ''}`
       if (paymentReturnHandled.current === returnKey) return
       paymentReturnHandled.current = returnKey
+      if (orderId) rememberPaymentOrder(user.id, orderId)
 
       const body = orderId ? { orderId } : {}
       void fetch('/api/mercadopago/verify-payment', {
@@ -587,15 +590,24 @@ export default function MiArgentinaApp() {
         if (response.ok && data.success) {
           const latestUser = useAppStore.getState().user
           if (latestUser?.id === user.id) setUser({ ...latestUser, tokens: data.tokens, tokenDebt: data.tokenDebt })
+          clearPendingPaymentOrder(user.id)
+          clearPurchaseAttempts(user.id)
+          window.history.replaceState({}, '', window.location.pathname)
+        } else if (['refunded', 'charged_back', 'partial_refund_review'].includes(data.status)) {
+          clearPendingPaymentOrder(user.id)
+          clearPurchaseAttempts(user.id)
+          window.history.replaceState({}, '', window.location.pathname)
+        } else {
+          paymentReturnHandled.current = null
         }
-      }).catch(() => {}).finally(() => {
+      }).catch(() => { paymentReturnHandled.current = null }).finally(() => {
         setView('tina')
-        window.history.replaceState({}, '', window.location.pathname)
       })
       return
     }
 
     if (paymentFailure === 'true' || paymentPending === 'true') {
+      if (user?.id && orderId) rememberPaymentOrder(user.id, orderId)
       setView('tina')
       window.history.replaceState({}, '', window.location.pathname)
     }
@@ -3109,10 +3121,16 @@ function TinaView({
       const res = await fetch('/api/mercadopago/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pack: selectedPack }),
+        body: JSON.stringify({ pack: selectedPack, attemptId: getPurchaseAttempt(user.id, selectedPack) }),
       })
       const data = await res.json()
-      if (!res.ok) { setError(data.detail || data.error || 'Error al crear el pago'); return }
+      if (!res.ok) {
+        if (data.resolved) clearPurchaseAttempts(user.id)
+        if (data.orderId) rememberPaymentOrder(user.id, data.orderId)
+        setError(data.detail || data.error || 'Error al crear el pago')
+        return
+      }
+      rememberPaymentOrder(user.id, data.orderId)
       window.location.href = data.checkout_url
     } catch {
       setError('Error de conexión')
@@ -3155,15 +3173,35 @@ function TinaView({
     setError(null)
     setMessage(null)
     try {
-      const res = await fetch('/api/mercadopago/verify-payment', {
+      const savedOrderId = pendingPaymentOrder(user.id)
+      let res = await fetch('/api/mercadopago/verify-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify(savedOrderId ? { orderId: savedOrderId } : {}),
       })
-      const data = await res.json()
-      if (!res.ok) { setError(data.error || 'No se encontró un pago aprobado'); return }
+      let data = await res.json()
+      if (savedOrderId && [404, 409].includes(res.status) && !['refunded', 'charged_back', 'partial_refund_review'].includes(data.status)) {
+        res = await fetch('/api/mercadopago/verify-payment', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+        })
+        data = await res.json()
+      }
+      if (!res.ok) {
+        if (['refunded', 'charged_back', 'partial_refund_review'].includes(data.status)) {
+          clearPendingPaymentOrder(user.id)
+          clearPurchaseAttempts(user.id)
+        }
+        setError(data.error || data.message || 'No se encontró un pago aprobado')
+        return
+      }
+      clearPendingPaymentOrder(user.id)
+      clearPurchaseAttempts(user.id)
       setUser({ ...user, tokens: data.tokens, tokenDebt: data.tokenDebt })
-      setMessage(data.tokenDebt > 0
+      setMessage(['refunded', 'charged_back'].includes(data.status)
+        ? 'Se actualizó el saldo por una reversión del pago.'
+        : data.alreadyProcessed
+        ? 'El pago ya estaba conciliado. Se actualizó tu saldo.'
+        : data.tokenDebt > 0
         ? 'Pago verificado. Se aplicó el paquete a regularizar un ajuste pendiente.'
         : typeof data.tokensAdded === 'number' && data.tokensAdded < data.quantity
           ? `Pago verificado. Quedaron ${data.tokensAdded} token(s) disponibles después de regularizar el ajuste.`

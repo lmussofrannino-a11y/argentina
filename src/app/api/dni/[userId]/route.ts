@@ -36,7 +36,7 @@ export async function PUT(
       )
     }
 
-    if (getSessionUserId(request) !== userId) {
+    if (await getSessionUserId(request) !== userId) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
@@ -109,7 +109,7 @@ export async function GET(
       )
     }
 
-    if (getSessionUserId(request) !== userId) {
+    if (await getSessionUserId(request) !== userId) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 

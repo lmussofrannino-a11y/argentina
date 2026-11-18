@@ -3,10 +3,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { dniPublicSelect, withoutDniImages } from '@/lib/dni-response'
 import { createSessionToken, setSessionCookie } from '@/lib/auth'
 import { hashPassword, verifyPassword } from '@/lib/password'
+import { enforceRateLimit, readLimitedJson, RequestLimitError, requestActor } from '@/lib/request-limits'
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    await enforceRateLimit('login:ip', requestActor(request), 30, 5 * 60 * 1000)
+    const body = await readLimitedJson(request)
 
     const { email, password } = body
 
@@ -17,7 +19,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (typeof email !== 'string' || typeof password !== 'string' || password.length > 1024) {
+    if (typeof email !== 'string' || email.length > 254 || typeof password !== 'string' || password.length > 1024) {
       return NextResponse.json(
         { error: 'Email o contraseña no válidos' },
         { status: 400 }
@@ -25,6 +27,7 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedEmail = email.trim().toLowerCase()
+    await enforceRateLimit('login:account', normalizedEmail, 10, 5 * 60 * 1000)
     const loginSelect = {
       id: true,
       email: true,
@@ -105,6 +108,7 @@ export async function POST(request: NextRequest) {
     setSessionCookie(response, sessionToken)
     return response
   } catch (error) {
+    if (error instanceof RequestLimitError) return NextResponse.json({ error: error.message }, { status: error.status })
     console.error('Error en login:', error)
     return NextResponse.json(
       { error: 'Error interno del servidor' },

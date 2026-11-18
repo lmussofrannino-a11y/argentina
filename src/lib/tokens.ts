@@ -1,58 +1,43 @@
-import { db } from './db'
+import { db, lockUserForTokenUpdate } from './db'
 
-export async function consumeTokenIfExpired(userId: string): Promise<{ isActive: boolean; tokensLeft: number; expired: boolean }> {
-  const user = await db.user.findUnique({
-    where: { id: userId },
-    select: { id: true, isActive: true, activatedAt: true, tokens: true, tokenDebt: true },
-  })
+const TOKEN_DURATION_MS = 24 * 60 * 60 * 1000
 
-  if (!user) return { isActive: false, tokensLeft: 0, expired: false }
+export async function consumeTokenIfExpired(userId: string) {
+  return db.$transaction(async (transaction) => {
+    await lockUserForTokenUpdate(transaction, userId)
+    const select = { isActive: true, activatedAt: true, tokens: true, tokenDebt: true } as const
+    const user = await transaction.user.findUnique({ where: { id: userId }, select })
+    if (!user) return { isActive: false, tokensLeft: 0, expired: false, activated: false, tokenDebt: 0, activatedAt: null, blockedReason: null }
 
-  let { isActive, activatedAt, tokens } = user
-
-  if (user.tokenDebt > 0) {
-    if (isActive) {
-      await db.user.updateMany({
+    if (user.tokenDebt > 0) {
+      await transaction.user.updateMany({
         where: { id: userId, isActive: true, tokenDebt: { gt: 0 } },
         data: { isActive: false, activatedAt: null },
       })
+      return { isActive: false, tokensLeft: user.tokens, expired: true, activated: false, tokenDebt: user.tokenDebt, activatedAt: null, blockedReason: 'debt' }
     }
-    return { isActive: false, tokensLeft: tokens, expired: true }
-  }
 
-  // If currently active and 24h have passed, expire this token (no decrement — token was consumed at activation)
-  if (isActive && activatedAt) {
-    const hoursSinceActivation = (Date.now() - new Date(activatedAt).getTime()) / (1000 * 60 * 60)
-    if (hoursSinceActivation >= 24) {
-      await db.user.update({
-        where: { id: userId },
-        data: {
-          isActive: false,
-          activatedAt: null,
-        },
+    const expired = Boolean(user.isActive && user.activatedAt && Date.now() - user.activatedAt.getTime() >= TOKEN_DURATION_MS)
+    if (expired) {
+      await transaction.user.updateMany({
+        where: { id: userId, isActive: true, activatedAt: user.activatedAt },
+        data: { isActive: false, activatedAt: null },
       })
-      isActive = false
-      activatedAt = null
     }
-  }
 
-  // If not active but has tokens, activate one atomically
-  if (!isActive && tokens > 0) {
-    const result = await db.user.updateMany({
-      where: { id: userId, tokens: { gt: 0 } },
-      data: {
-        isActive: true,
-        activatedAt: new Date(),
-        tokens: { decrement: 1 },
-      },
+    const activation = await transaction.user.updateMany({
+      where: { id: userId, isActive: false, tokenDebt: 0, tokens: { gt: 0 } },
+      data: { isActive: true, activatedAt: new Date(), tokens: { decrement: 1 } },
     })
-    if (result.count > 0) {
-      tokens -= 1
-      return { isActive: true, tokensLeft: tokens, expired: false }
+    const current = await transaction.user.findUniqueOrThrow({ where: { id: userId }, select })
+    return {
+      isActive: current.isActive,
+      tokensLeft: current.tokens,
+      expired,
+      activated: activation.count === 1,
+      tokenDebt: current.tokenDebt,
+      activatedAt: current.activatedAt,
+      blockedReason: current.tokenDebt > 0 ? 'debt' : !current.isActive ? 'no_tokens' : null,
     }
-    // Race lost - tokens were consumed by another request
-    return { isActive: false, tokensLeft: 0, expired: true }
-  }
-
-  return { isActive, tokensLeft: tokens, expired: !isActive && tokens === 0 }
+  })
 }

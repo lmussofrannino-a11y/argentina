@@ -1,4 +1,4 @@
-import { db } from '@/lib/db'
+import { db, lockUserForTokenUpdate } from '@/lib/db'
 
 export type MercadoPagoCheckoutOrder = {
   id: string
@@ -16,13 +16,14 @@ export type MercadoPagoCheckoutOrder = {
   }
 }
 
-export async function fetchMercadoPagoOrder(orderId: string): Promise<MercadoPagoCheckoutOrder | null> {
+export async function fetchMercadoPagoOrder(orderId: string, signal?: AbortSignal): Promise<MercadoPagoCheckoutOrder | null> {
   const accessToken = process.env.MERCADO_PAGO_ORDERS_ACCESS_TOKEN
   if (!accessToken) throw new Error('MERCADO_PAGO_ORDERS_ACCESS_TOKEN is not configured')
 
   const response = await fetch(`https://api.mercadopago.com/v1/orders/${encodeURIComponent(orderId)}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
     cache: 'no-store',
+    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(10000)]) : AbortSignal.timeout(10000),
   })
   if (!response.ok) return null
 
@@ -32,6 +33,10 @@ export async function fetchMercadoPagoOrder(orderId: string): Promise<MercadoPag
 }
 
 export async function applyApprovedCheckoutOrder(order: MercadoPagoCheckoutOrder) {
+  if (getCheckoutOrderReversalStatus(order)) {
+    const result = await applyCheckoutOrderReversal(order)
+    return { ...result, success: false, message: result.message ?? 'La order tiene una reversión y no puede acreditarse' }
+  }
   if (order.status !== 'processed' || order.status_detail !== 'accredited') {
     return { success: false, alreadyProcessed: false, message: 'La order no está procesada y acreditada' }
   }
@@ -59,8 +64,15 @@ export async function applyApprovedCheckoutOrder(order: MercadoPagoCheckoutOrder
   }
 
   return db.$transaction(async (transaction) => {
+    await lockUserForTokenUpdate(transaction, localOrder.userId)
     const existingPayment = await transaction.processedPayment.findUnique({ where: { id: providerOrderId } })
     if (existingPayment) {
+      if (existingPayment.userId !== localOrder.userId || existingPayment.orderId !== localOrder.id) {
+        return { success: false, alreadyProcessed: false, message: 'El pago no pertenece a esta order' }
+      }
+      if (existingPayment.status !== 'approved') {
+        return { success: false, alreadyProcessed: true, status: existingPayment.status, message: 'La order ya fue revertida o requiere conciliación' }
+      }
       const user = await transaction.user.findUnique({
         where: { id: existingPayment.userId },
         select: { tokens: true, tokenDebt: true },
@@ -80,7 +92,7 @@ export async function applyApprovedCheckoutOrder(order: MercadoPagoCheckoutOrder
     })
     if (claimedOrder.count !== 1) {
       const processedAfterRace = await transaction.processedPayment.findUnique({ where: { id: providerOrderId } })
-      if (processedAfterRace) {
+      if (processedAfterRace?.status === 'approved' && processedAfterRace.userId === localOrder.userId && processedAfterRace.orderId === localOrder.id) {
         const user = await transaction.user.findUnique({
           where: { id: processedAfterRace.userId },
           select: { tokens: true, tokenDebt: true },
@@ -105,6 +117,7 @@ export async function applyApprovedCheckoutOrder(order: MercadoPagoCheckoutOrder
         amount: localOrder.amount,
         currency: localOrder.currency,
         status: 'approved',
+        creditedQuantity: localOrder.quantity,
       },
     })
 
@@ -136,10 +149,16 @@ export async function applyApprovedCheckoutOrder(order: MercadoPagoCheckoutOrder
   })
 }
 
+export function getCheckoutOrderReversalStatus(order: MercadoPagoCheckoutOrder) {
+  if (order.status === 'refunded' || order.status === 'charged_back') return order.status
+  if (order.status_detail === 'partially_refunded' || order.transactions?.refunds?.some((refund) => Number(refund.amount) > 0)) return 'partial_refund_review'
+  return null
+}
+
 export async function applyCheckoutOrderReversal(order: MercadoPagoCheckoutOrder) {
-  const isPartialRefund = order.status === 'processed' && order.status_detail === 'partially_refunded'
-  const reversalStatus = isPartialRefund ? 'partial_refund_review' : order.status
-  if (!isPartialRefund && reversalStatus !== 'refunded' && reversalStatus !== 'charged_back') {
+  const reversalStatus = getCheckoutOrderReversalStatus(order)
+  const isPartialRefund = reversalStatus === 'partial_refund_review'
+  if (!reversalStatus) {
     return { success: false, alreadyProcessed: false, message: 'La order no tiene un estado de reversión' }
   }
 
@@ -160,20 +179,33 @@ export async function applyCheckoutOrderReversal(order: MercadoPagoCheckoutOrder
   }
 
   if (isPartialRefund) {
-    await db.$transaction(async (transaction) => {
-      await transaction.paymentOrder.updateMany({
-        where: { id: localOrder.id, providerOrderId, status: 'paid' },
+    return db.$transaction(async (transaction) => {
+      await lockUserForTokenUpdate(transaction, localOrder.userId)
+      const claimed = await transaction.paymentOrder.updateMany({
+        where: { id: localOrder.id, providerOrderId, status: { in: ['pending', 'paid'] } },
         data: { status: 'partial_refund_review' },
       })
+      if (claimed.count !== 1) {
+        const latest = await transaction.paymentOrder.findUniqueOrThrow({ where: { id: localOrder.id } })
+        const final = latest.status === 'refunded' || latest.status === 'charged_back'
+        return { success: final, alreadyProcessed: true, status: latest.status, message: final ? undefined : 'El reembolso parcial requiere conciliación manual' }
+      }
+      const processed = await transaction.processedPayment.findUnique({ where: { id: providerOrderId } })
+      if (!processed) {
+        await transaction.processedPayment.create({
+          data: { id: providerOrderId, userId: localOrder.userId, orderId: localOrder.id, quantity: localOrder.quantity, amount: localOrder.amount, currency: localOrder.currency, status: 'partial_refund_review', creditedQuantity: 0 },
+        })
+      }
       await transaction.processedPayment.updateMany({
         where: { id: providerOrderId, status: 'approved' },
         data: { status: 'partial_refund_review' },
       })
+      return { success: false, alreadyProcessed: false, status: 'partial_refund_review', message: 'El reembolso parcial requiere conciliación manual' }
     })
-    return { success: false, alreadyProcessed: false, status: 'partial_refund_review', message: 'El reembolso parcial requiere conciliación manual' }
   }
 
   return db.$transaction(async (transaction) => {
+    await lockUserForTokenUpdate(transaction, localOrder.userId)
     const processed = await transaction.processedPayment.findUnique({ where: { id: providerOrderId } })
     const claimedOrder = await transaction.paymentOrder.updateMany({
       where: {
@@ -189,11 +221,11 @@ export async function applyCheckoutOrderReversal(order: MercadoPagoCheckoutOrder
         where: { id: localOrder.userId },
         select: { tokens: true, tokenDebt: true },
       })
-      if (latestOrder?.status === reversalStatus) {
+      if (latestOrder?.status === 'refunded' || latestOrder?.status === 'charged_back') {
         return {
           success: true,
           alreadyProcessed: true,
-          status: reversalStatus,
+          status: latestOrder.status,
           tokens: user?.tokens ?? 0,
           tokenDebt: user?.tokenDebt ?? 0,
         }
@@ -202,7 +234,13 @@ export async function applyCheckoutOrderReversal(order: MercadoPagoCheckoutOrder
     }
 
     const payment = processed ?? await transaction.processedPayment.findUnique({ where: { id: providerOrderId } })
-    if (!payment) return { success: true, alreadyProcessed: false, status: reversalStatus, tokens: 0, tokenDebt: 0 }
+    if (!payment) {
+      await transaction.processedPayment.create({
+        data: { id: providerOrderId, userId: localOrder.userId, orderId: localOrder.id, quantity: localOrder.quantity, amount: localOrder.amount, currency: localOrder.currency, status: reversalStatus, creditedQuantity: 0 },
+      })
+      const current = await transaction.user.findUniqueOrThrow({ where: { id: localOrder.userId }, select: { tokens: true, tokenDebt: true } })
+      return { success: true, alreadyProcessed: false, status: reversalStatus, ...current }
+    }
 
     const user = await transaction.user.findUnique({
       where: { id: localOrder.userId },
@@ -210,15 +248,15 @@ export async function applyCheckoutOrderReversal(order: MercadoPagoCheckoutOrder
     })
     if (!user) throw new Error('Payment order owner no longer exists')
 
-    const tokensRemoved = Math.min(user.tokens, localOrder.quantity)
-    const remainingDebt = localOrder.quantity - tokensRemoved
+    const creditedQuantity = payment.creditedQuantity ?? payment.quantity ?? localOrder.quantity
+    const tokensRemoved = Math.min(user.tokens, creditedQuantity)
+    const remainingDebt = creditedQuantity - tokensRemoved
     await transaction.user.update({
       where: { id: localOrder.userId },
       data: {
         tokens: { decrement: tokensRemoved },
         tokenDebt: { increment: remainingDebt },
-        isActive: false,
-        activatedAt: null,
+        ...(creditedQuantity > 0 ? { isActive: false, activatedAt: null } : {}),
       },
     })
     await transaction.processedPayment.update({

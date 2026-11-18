@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto'
+import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
@@ -8,6 +8,7 @@ const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7
 type SessionPayload = {
   sub: string
   exp: number
+  sid?: string
 }
 
 function getSessionSecret(): string | null {
@@ -26,6 +27,7 @@ export function createSessionToken(userId: string): string {
   const payload: SessionPayload = {
     sub: userId,
     exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS,
+    sid: randomUUID(),
   }
   const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url')
   return `${encodedPayload}.${sign(encodedPayload, secret)}`
@@ -51,7 +53,7 @@ export function clearSessionCookie(response: NextResponse): void {
   })
 }
 
-export function getSessionUserId(request: NextRequest): string | null {
+function readSession(request: NextRequest): (SessionPayload & { tokenHash: string }) | null {
   const secret = getSessionSecret()
   if (!secret) return null
 
@@ -78,17 +80,34 @@ export function getSessionUserId(request: NextRequest): string | null {
     ) {
       return null
     }
-    return payload.sub
+    return { sub: payload.sub, exp: payload.exp, tokenHash: createHash('sha256').update(token).digest('hex') }
   } catch {
     return null
   }
 }
 
-export async function isAdminRequest(request: NextRequest): Promise<boolean> {
-  const userId = getSessionUserId(request)
-  const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase()
-  if (!userId || !adminEmail) return false
+export async function getSessionUserId(request: NextRequest): Promise<string | null> {
+  const session = readSession(request)
+  if (!session) return null
+  const revoked = await db.revokedSession.findUnique({ where: { id: session.tokenHash } })
+  return revoked ? null : session.sub
+}
 
-  const user = await db.user.findUnique({ where: { id: userId }, select: { email: true } })
-  return user?.email.trim().toLowerCase() === adminEmail
+export async function revokeSession(request: NextRequest): Promise<void> {
+  const session = readSession(request)
+  if (!session) return
+  // Hash the full token, so logout also revokes pre-upgrade cookies.
+  await db.revokedSession.upsert({
+    where: { id: session.tokenHash },
+    create: { id: session.tokenHash, expiresAt: new Date(session.exp * 1000) },
+    update: {},
+  })
+  await db.revokedSession.deleteMany({ where: { expiresAt: { lt: new Date() } } })
+}
+
+export async function isAdminRequest(request: NextRequest): Promise<boolean> {
+  const userId = await getSessionUserId(request)
+  if (!userId) return false
+  const user = await db.user.findUnique({ where: { id: userId }, select: { isAdmin: true } })
+  return user?.isAdmin === true
 }

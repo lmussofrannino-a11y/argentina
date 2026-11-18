@@ -17,7 +17,7 @@ export async function GET(
       )
     }
 
-    if (getSessionUserId(request) !== id) {
+    if (await getSessionUserId(request) !== id) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 

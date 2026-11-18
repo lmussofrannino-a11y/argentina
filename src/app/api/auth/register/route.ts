@@ -5,6 +5,7 @@ import { dniPublicSelect, withoutDniImages } from '@/lib/dni-response'
 import { isR2WriteEnabled, uploadDniImage } from '@/lib/r2-dni-images'
 import { createSessionToken, setSessionCookie } from '@/lib/auth'
 import { hashPassword } from '@/lib/password'
+import { enforceRateLimit, readLimitedJson, RequestLimitError, requestActor } from '@/lib/request-limits'
 
 function generateTramiteNumero(): string {
   let result = ''
@@ -16,7 +17,8 @@ function generateTramiteNumero(): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    await enforceRateLimit('register:ip', requestActor(request), 5, 15 * 60 * 1000)
+    const body = await readLimitedJson(request, 4 * 1024 * 1024)
 
     const {
       email,
@@ -72,6 +74,9 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedEmail = email.trim().toLowerCase()
+    if (normalizedEmail.length > 254 || normalizedEmail === process.env.ADMIN_EMAIL?.trim().toLowerCase()) {
+      return NextResponse.json({ error: 'Este email no está disponible para registro' }, { status: 409 })
+    }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(normalizedEmail)) {
@@ -88,8 +93,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const existingUser = await db.user.findUnique({
-      where: { email: normalizedEmail },
+    const existingUser = await db.user.findFirst({
+      where: { email: { equals: normalizedEmail, mode: 'insensitive' } },
     })
 
     if (existingUser) {
@@ -99,7 +104,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const tramiteNumero = providedTramiteNumero || generateTramiteNumero()
+    for (const value of [nombre, apellido, dniNumero, domicilio, nacimiento, fechaEmision, sexo, providedTramiteNumero]) {
+      if (value !== undefined && (typeof value !== 'string' || value.length > 500)) {
+        return NextResponse.json({ error: 'Uno de los campos es demasiado largo o no es válido' }, { status: 400 })
+      }
+    }
+    const tramiteNumero = (typeof providedTramiteNumero === 'string' && providedTramiteNumero) || generateTramiteNumero()
     const userId = randomUUID()
     const sessionToken = createSessionToken(userId)
     const hashedPassword = await hashPassword(password)
@@ -157,6 +167,7 @@ export async function POST(request: NextRequest) {
     setSessionCookie(response, sessionToken)
     return response
   } catch (error) {
+    if (error instanceof RequestLimitError) return NextResponse.json({ error: error.message }, { status: error.status })
     console.error('Error en registro:', error)
     return NextResponse.json(
       { error: 'Error interno del servidor' },

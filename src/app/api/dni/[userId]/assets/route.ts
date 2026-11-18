@@ -23,7 +23,7 @@ export async function GET(
     if (!userId) {
       return NextResponse.json({ error: 'ID de usuario requerido' }, { status: 400 })
     }
-    if (getSessionUserId(_request) !== userId) {
+    if (await getSessionUserId(_request) !== userId) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
