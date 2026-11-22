@@ -918,7 +918,7 @@ function EditMenu() {
           <EditField label="Nombre" value={nombre} onChange={setNombre} />
           <EditField label="Apellido" value={apellido} onChange={setApellido} />
           <EditField label="DNI" value={dniNumero} onChange={setDniNumero} />
-          <EditField label="Domicilio" value={domicilio} onChange={setDomicilio} />
+          <EditField label="Domicilio" value={domicilio} onChange={setDomicilio} multiline />
           <EditField label="Fecha de Nacimiento" value={nacimiento} onChange={setNacimiento} />
           <EditField label="Fecha de Emisión" value={fechaEmision} onChange={setFechaEmision} />
           <EditField label="Sexo" value={sexo} onChange={setSexo} />
@@ -940,14 +940,19 @@ function EditMenu() {
   );
 }
 
-function EditField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function EditField({ label, value, onChange, multiline = false }: { label: string; value: string; onChange: (v: string) => void; multiline?: boolean }) {
+  const fieldStyle: React.CSSProperties = {
+    width: '100%', padding: '8px 10px', border: '1px solid #ccc', borderRadius: '6px',
+    fontSize: '14px', fontFamily: SYS_FONT, boxSizing: 'border-box',
+  };
   return (
     <div style={{ marginBottom: '12px' }}>
       <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px', fontFamily: SYS_FONT }}>{label}</label>
-      <input value={value} onChange={(e) => onChange(e.target.value)} style={{
-        width: '100%', padding: '8px 10px', border: '1px solid #ccc', borderRadius: '6px',
-        fontSize: '14px', fontFamily: SYS_FONT, boxSizing: 'border-box',
-      }} />
+      {multiline ? (
+        <textarea aria-label={label} rows={2} value={value} onChange={(e) => onChange(e.target.value)} style={{ ...fieldStyle, resize: 'vertical' }} />
+      ) : (
+        <input value={value} onChange={(e) => onChange(e.target.value)} style={fieldStyle} />
+      )}
     </div>
   );
 }
@@ -1175,7 +1180,7 @@ function RegisterView() {
           <RegField label="Apellido" value={apellido} onChange={setApellido} />
           <RegField label="DNI" value={dniNumero} onChange={setDniNumero} type="number" />
           <RegField label="Tramite No" value={tramiteNumero} onChange={setTramiteNumero} />
-          <RegField label="Domicilio" value={domicilio} onChange={setDomicilio} />
+          <RegField label="Domicilio" value={domicilio} onChange={setDomicilio} multiline />
 
           <div>
             <label style={{ color: '#8e8e8e', fontSize: '14px', display: 'block', marginBottom: '4px', fontFamily: SYS_FONT }}>Nacimiento</label>
@@ -1249,12 +1254,16 @@ function RegisterView() {
   );
 }
 
-function RegField({ label, value, onChange, type = 'text' }: { label: string; value: string; onChange: (v: string) => void; type?: string }) {
+function RegField({ label, value, onChange, type = 'text', multiline = false }: { label: string; value: string; onChange: (v: string) => void; type?: string; multiline?: boolean }) {
+  const fieldStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', border: '1px solid #dbdbdb', borderRadius: '3px', fontSize: '14px', background: '#fafafa', color: '#333', fontFamily: SYS_FONT, boxSizing: 'border-box', outline: 'none' };
   return (
     <div>
       <label style={{ color: '#8e8e8e', fontSize: '14px', display: 'block', marginBottom: '4px', fontFamily: SYS_FONT }}>{label}</label>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)}
-        style={{ width: '100%', padding: '10px 12px', border: '1px solid #dbdbdb', borderRadius: '3px', fontSize: '14px', background: '#fafafa', color: '#333', fontFamily: SYS_FONT, boxSizing: 'border-box', outline: 'none' }} />
+      {multiline ? (
+        <textarea aria-label={label} rows={2} value={value} onChange={(e) => onChange(e.target.value)} style={{ ...fieldStyle, resize: 'vertical' }} />
+      ) : (
+        <input type={type} value={value} onChange={(e) => onChange(e.target.value)} style={fieldStyle} />
+      )}
     </div>
   );
 }
@@ -1348,13 +1357,15 @@ function DniPreviewCard({ nombre, apellido, dniNumero, sexo, nacimiento, fechaEm
         {!showFront && (
           <div className="DNI_back" style={{ aspectRatio: '1320 / 833', position: 'relative', width: '100%', backfaceVisibility: 'hidden', zIndex: 1 }}>
             <img src="/dorso.webp" alt="back dni" style={{ objectFit: 'contain', width: '100%' }} />
-            <div style={{ position: 'absolute', top: '5%', left: '2%', color: '#000', fontFamily: DNI_FONT, fontSize: '11px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-              <span>DOMICILIO: </span>
-              <span>{(domicilio || '-').toUpperCase()}</span>
-            </div>
-            <div style={{ position: 'absolute', top: '15%', left: '2%', color: '#000', fontFamily: DNI_FONT, fontSize: '11px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-              <span>LUGAR DE NACIMIENTO: </span>
-              <span>ARGENTINA</span>
+            <div style={{ position: 'absolute', top: '5%', left: '2%', right: '2%', color: '#000', fontFamily: DNI_FONT, fontSize: '11px', lineHeight: 1.2 }}>
+              <div style={{ whiteSpace: 'pre-line', overflowWrap: 'anywhere' }}>
+                <span>DOMICILIO: </span>
+                <span>{(domicilio || '-').toUpperCase()}</span>
+              </div>
+              <div style={{ marginTop: '3px' }}>
+                <span>LUGAR DE NACIMIENTO: </span>
+                <span>ARGENTINA</span>
+              </div>
             </div>
             <div style={{ position: 'absolute', bottom: '2%', left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#a0c4e0', transition: 'background-color 0.3s ease' }} />
@@ -2010,15 +2021,16 @@ function DniViewerView() {
                     <img src="/dorso.webp" alt="back dni" style={{ objectFit: 'contain', width: '100%' }} />
 
                     {/* DOMICILIO */}
-                    <div style={{ position: 'absolute', top: '5%', left: '2%', color: '#000', fontFamily: DNI_FONT, fontSize: '11px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-                      <span>DOMICILIO: </span>
-                      <span>{(dni.domicilio || '-').toUpperCase()}</span>
-                    </div>
-
-                    {/* LUGAR DE NACIMIENTO */}
-                    <div style={{ position: 'absolute', top: '15%', left: '2%', color: '#000', fontFamily: DNI_FONT, fontSize: '11px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-                      <span>LUGAR DE NACIMIENTO: </span>
-                      <span>ARGENTINA</span>
+                    <div style={{ position: 'absolute', top: '5%', left: '2%', right: '2%', color: '#000', fontFamily: DNI_FONT, fontSize: '11px', lineHeight: 1.2 }}>
+                      <div style={{ whiteSpace: 'pre-line', overflowWrap: 'anywhere' }}>
+                        <span>DOMICILIO: </span>
+                        <span>{(dni.domicilio || '-').toUpperCase()}</span>
+                      </div>
+                      {/* Flow below the address, including any manual line breaks. */}
+                      <div style={{ marginTop: '3px' }}>
+                        <span>LUGAR DE NACIMIENTO: </span>
+                        <span>ARGENTINA</span>
+                      </div>
                     </div>
 
                     {/* Dynamic dots indicator - back side, bottom center */}
