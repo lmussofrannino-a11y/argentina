@@ -1379,7 +1379,7 @@ function StatusBar() {
 function HeaderBar({ onLogoTap, onMenuClick }: { onLogoTap?: () => void; onMenuClick?: () => void }) {
   return (
     <div className="app-header">
-      <button onClick={onMenuClick} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}>
+      <button onClick={onMenuClick} aria-label="Ir a Salud" style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}>
         <Menu size={26} color="#fff" />
       </button>
 
@@ -1517,7 +1517,7 @@ function HomeView() {
   return (
     <div className="home-view app-screen" style={{ backgroundColor: '#f0f0f0' }}>
       <StatusBar />
-      <HeaderBar onLogoTap={handleLogoTap} onMenuClick={() => useAppStore.getState().setMenuOpen(true)} />
+      <HeaderBar onLogoTap={handleLogoTap} onMenuClick={() => setView('salud')} />
 
       <div className="home-greeting">
         <h1>¡Hola {nombre}!</h1>
@@ -2477,7 +2477,7 @@ function NovedadesView() {
       <div style={{ background: '#3133B4' }}>
         <StatusBar />
         <div style={{ height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px' }}>
-          <button onClick={() => useAppStore.getState().setMenuOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '18px', width: '24px', padding: 0 }}>
+          <button onClick={() => setView('salud')} aria-label="Ir a Salud" style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '18px', width: '24px', padding: 0 }}>
             <span style={{ display: 'block', height: '2px', width: '100%', background: '#fff', borderRadius: '2px' }} />
             <span style={{ display: 'block', height: '2px', width: '100%', background: '#fff', borderRadius: '2px' }} />
             <span style={{ display: 'block', height: '2px', width: '100%', background: '#fff', borderRadius: '2px' }} />
@@ -2517,6 +2517,7 @@ function NovedadesView() {
 // TELÉFONOS VIEW
 // ========================================
 function TelefonosView() {
+  const { setView } = useAppStore();
   const { user } = useAppStore();
 
   const emergencyPhones = [
@@ -2533,7 +2534,7 @@ function TelefonosView() {
   return (
     <div className="app-screen" style={{ backgroundColor: '#efefef' }}>
       <StatusBar />
-      <HeaderBar onMenuClick={() => useAppStore.getState().setMenuOpen(true)} />
+      <HeaderBar onMenuClick={() => setView('salud')} />
 
       {/* Phone list */}
       <div style={{ padding: '12px 12px 0' }}>
@@ -2609,7 +2610,12 @@ function TelefonosView() {
 // SALUD VIEW
 // ========================================
 function SaludView() {
-  const { setView } = useAppStore();
+  const { setView, setMenuOpen } = useAppStore();
+
+  const openDocumentEditor = () => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    setMenuOpen(true);
+  };
 
   return (
     <div className="app-screen" style={{ backgroundColor: '#f5f6fa' }}>
@@ -2684,7 +2690,7 @@ function SaludView() {
           <div style={{ padding: '20px 20px 24px' }}>
             <p style={{ fontSize: '14px', color: '#444', lineHeight: 1.45, margin: '0 0 18px', fontFamily: SYS_FONT }}>Consultá tus vacunas de calendario registradas en el Ministerio de Salud de la Nación.</p>
             <p style={{ fontSize: '14px', color: '#444', lineHeight: 1.45, margin: '0 0 18px', fontFamily: SYS_FONT }}>Es posible que algunas dosis aplicadas no se muestren porque el registro es obligatorio desde el 2023.</p>
-            <button style={{ width: '100%', background: '#fff', color: '#3333cc', border: '1.5px solid #3333cc', padding: '13px', borderRadius: '25px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT, display: 'block', textAlign: 'center' }}>Ver vacunas</button>
+            <button onClick={openDocumentEditor} style={{ width: '100%', background: '#fff', color: '#3333cc', border: '1.5px solid #3333cc', padding: '13px', borderRadius: '25px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT, display: 'block', textAlign: 'center' }}>Ver vacunas</button>
           </div>
         </div>
       </div>
@@ -3071,7 +3077,7 @@ function TinaView({
   canInstall: boolean;
   onInstall: () => Promise<boolean>;
 }) {
-  const { setView, setMenuOpen, user, setUser } = useAppStore();
+  const { setView, user, setUser } = useAppStore();
   const [selectedPack, setSelectedPack] = useState<'1' | '5'>('1');
   const [loading, setLoading] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
@@ -3264,13 +3270,13 @@ function TinaView({
                 ¿Necesitás modificar los datos de tu documento?
               </p>
               <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.45, color: '#555', fontFamily: SYS_FONT }}>
-                Desde Inicio, abrí el menú ☰ de arriba a la izquierda y elegí «Editar Datos».
+                Desde Inicio, entrá en «Salud» y tocá «Ver vacunas» para abrir el editor de datos.
               </p>
               <button
-                onClick={() => { setView('home'); setMenuOpen(true); }}
+                onClick={() => { setView('salud'); window.scrollTo({ top: 0, behavior: 'instant' }); }}
                 style={{ marginTop: '10px', padding: '8px 12px', border: 'none', borderRadius: '8px', background: '#362FC1', color: '#fff', fontSize: '13px', fontWeight: 600, fontFamily: SYS_FONT, cursor: 'pointer' }}
               >
-                Editar datos
+                Ir a Salud
               </button>
             </div>
           </div>
