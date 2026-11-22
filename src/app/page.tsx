@@ -1423,6 +1423,7 @@ function BottomNavBar({ activeTab }: { activeTab: BottomTab }) {
         {tabs.map((tab) => {
           const isActive = activeTab === tab.key;
           const needsActivation = tab.key === 'tina' && documentInactive;
+          const iconSrc = isActive && tab.activeIcon ? tab.activeIcon : tab.icon;
           return (
             <button
               key={tab.key}
@@ -1434,7 +1435,11 @@ function BottomNavBar({ activeTab }: { activeTab: BottomTab }) {
               style={{ background: needsActivation ? '#fff0b3' : 'none', border: needsActivation ? '2px solid #e5b349' : '2px solid transparent', borderRadius: '10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', minHeight: '56px', minWidth: 0, flex: 1 }}
             >
               <div style={{ height: '37px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                <img src={isActive && tab.activeIcon ? tab.activeIcon : tab.icon} alt="" aria-hidden="true" style={{ ...tab.iconStyle, maxWidth: '100%', objectFit: 'contain', filter: tab.activeIcon ? 'none' : (isActive ? 'brightness(0) saturate(100%) invert(22%) sepia(95%) saturate(3000%) hue-rotate(240deg)' : 'brightness(0) saturate(0%) invert(46%)') }} />
+                {tab.key === 'tina' ? (
+                  <img src={iconSrc} alt="" aria-hidden="true" style={{ ...tab.iconStyle, maxWidth: '100%', objectFit: 'contain' }} />
+                ) : (
+                  <span aria-hidden="true" className="bottom-nav-icon" style={{ ...tab.iconStyle, color: isActive ? '#362FC1' : '#757575', WebkitMaskImage: `url("${iconSrc}")`, maskImage: `url("${iconSrc}")` }} />
+                )}
                 {needsActivation && (
                   <span aria-hidden="true" style={{ position: 'absolute', top: '1px', left: 'calc(50% + 9px)', width: '16px', height: '16px', borderRadius: '50%', background: '#8a4600', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800, fontFamily: SYS_FONT }}>!</span>
                 )}
