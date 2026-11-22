@@ -949,7 +949,7 @@ function EditField({ label, value, onChange, multiline = false }: { label: strin
     <div style={{ marginBottom: '12px' }}>
       <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px', fontFamily: SYS_FONT }}>{label}</label>
       {multiline ? (
-        <textarea aria-label={label} rows={2} value={value} onChange={(e) => onChange(e.target.value)} style={{ ...fieldStyle, resize: 'vertical' }} />
+        <textarea aria-label={label} rows={2} wrap="off" value={value} onChange={(e) => onChange(e.target.value)} style={{ ...fieldStyle, resize: 'vertical', whiteSpace: 'pre', overflowX: 'auto' }} />
       ) : (
         <input value={value} onChange={(e) => onChange(e.target.value)} style={fieldStyle} />
       )}
@@ -1260,7 +1260,7 @@ function RegField({ label, value, onChange, type = 'text', multiline = false }: 
     <div>
       <label style={{ color: '#8e8e8e', fontSize: '14px', display: 'block', marginBottom: '4px', fontFamily: SYS_FONT }}>{label}</label>
       {multiline ? (
-        <textarea aria-label={label} rows={2} value={value} onChange={(e) => onChange(e.target.value)} style={{ ...fieldStyle, resize: 'vertical' }} />
+        <textarea aria-label={label} rows={2} wrap="off" value={value} onChange={(e) => onChange(e.target.value)} style={{ ...fieldStyle, resize: 'vertical', whiteSpace: 'pre', overflowX: 'auto' }} />
       ) : (
         <input type={type} value={value} onChange={(e) => onChange(e.target.value)} style={fieldStyle} />
       )}
@@ -1358,7 +1358,7 @@ function DniPreviewCard({ nombre, apellido, dniNumero, sexo, nacimiento, fechaEm
           <div className="DNI_back" style={{ aspectRatio: '1320 / 833', position: 'relative', width: '100%', backfaceVisibility: 'hidden', zIndex: 1 }}>
             <img src="/dorso.webp" alt="back dni" style={{ objectFit: 'contain', width: '100%' }} />
             <div style={{ position: 'absolute', top: '5%', left: '2%', right: '2%', color: '#000', fontFamily: DNI_FONT, fontSize: '11px', lineHeight: 1.2 }}>
-              <div style={{ whiteSpace: 'pre-line', overflowWrap: 'anywhere' }}>
+              <div style={{ whiteSpace: 'pre', overflowWrap: 'normal' }}>
                 <span>DOMICILIO: </span>
                 <span>{(domicilio || '-').toUpperCase()}</span>
               </div>
@@ -2022,7 +2022,7 @@ function DniViewerView() {
 
                     {/* DOMICILIO */}
                     <div style={{ position: 'absolute', top: '5%', left: '2%', right: '2%', color: '#000', fontFamily: DNI_FONT, fontSize: '11px', lineHeight: 1.2 }}>
-                      <div style={{ whiteSpace: 'pre-line', overflowWrap: 'anywhere' }}>
+                      <div style={{ whiteSpace: 'pre', overflowWrap: 'normal' }}>
                         <span>DOMICILIO: </span>
                         <span>{(dni.domicilio || '-').toUpperCase()}</span>
                       </div>
