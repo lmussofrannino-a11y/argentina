@@ -353,11 +353,21 @@ html {
   font-family: inherit;
 }
 
-.home-service svg {
-  width: calc(34 * var(--home-unit));
+.home-service-icon {
+  width: 100%;
   height: calc(34 * var(--home-unit));
+  overflow: hidden;
   flex-shrink: 0;
-  color: #3d30cf;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.home-service-icon img {
+  max-width: none;
+  flex-shrink: 0;
+  object-fit: contain;
+  pointer-events: none;
 }
 
 .home-service span {

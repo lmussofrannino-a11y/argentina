@@ -33,9 +33,6 @@ import {
   Timer,
   Zap,
   CreditCard,
-  IdCard,
-  Banknote,
-  UsersRound,
   Download,
   Share,
   Smartphone,
@@ -1502,14 +1499,14 @@ function HomeView() {
   };
 
   const services = [
-    { icon: IdCard, label: 'Documentos', action: () => setView('documentos') },
-    { icon: Car, label: 'Vehículos', action: () => setView('vehiculos') },
-    { icon: Briefcase, label: 'Trabajo', action: () => setView('trabajo') },
-    { icon: Heart, label: 'Salud', action: () => setView('salud') },
-    { icon: Banknote, label: 'Cobros', action: () => setView('cobros') },
-    { icon: FileText, label: 'Trámites', action: () => setView('tramites') },
-    { icon: Ticket, label: 'Turnos', action: () => {} },
-    { icon: UsersRound, label: 'Hijos', action: () => setView('hijos') },
+    { icon: '/icons/serv-tramites.webp', label: 'Documentos', action: () => setView('documentos'), w: 49, h: 49, scale: 1.8 },
+    { icon: '/icons/serv-vehiculos.webp', label: 'Vehículos', action: () => setView('vehiculos'), w: 79, h: 81, scale: 1.8 },
+    { icon: '/icons/serv-trabajo.webp', label: 'Trabajo', action: () => setView('trabajo'), w: 42, h: 44, scale: 1.8 },
+    { icon: '/icons/serv-salud.webp', label: 'Salud', action: () => setView('salud'), w: 52, h: 52, scale: 1 },
+    { icon: '/icons/serv-cobros.webp', label: 'Cobros', action: () => setView('cobros'), w: 48, h: 48, scale: 1.8 },
+    { icon: '/icons/serv-documentos.webp', label: 'Trámites', action: () => setView('tramites'), w: 48, h: 48, scale: 1.8 },
+    { icon: '/icons/serv-turnos.webp', label: 'Turnos', action: () => {}, w: 52, h: 52, scale: 1 },
+    { icon: '/icons/serv-hijos.webp', label: 'Hijos', action: () => setView('hijos'), w: 45, h: 45, scale: 1.8 },
   ];
 
   return (
@@ -1557,7 +1554,9 @@ function HomeView() {
         <div className="home-service-grid">
           {services.map((s, i) => (
             <button key={i} onClick={s.action} className="home-service">
-              <s.icon aria-hidden="true" strokeWidth={1.5} />
+              <div className="home-service-icon" aria-hidden="true">
+                <img src={s.icon} alt="" style={{ width: `calc(${s.w * s.scale} * var(--home-unit))`, height: `calc(${s.h * s.scale} * var(--home-unit))` }} />
+              </div>
               <span>{s.label}</span>
             </button>
           ))}
@@ -3447,7 +3446,7 @@ function TinaView({
           {user ? 'Crear cuenta nueva' : 'Registrarse'}
         </button>
         <a
-          href="https://wa.me/5492612540869"
+          href="https://wa.me/5492616407475"
           target="_blank"
           rel="noopener noreferrer"
           className="tina-support-link"
