@@ -125,8 +125,14 @@ nextjs-portal {
   --app-nav-space: calc(78px + var(--app-safe-bottom));
 }
 
+/* Keep the iOS viewport/safe-area backdrop solid and suppress vertical bounce. */
+html,
+body {
+  background-color: #362fc1;
+  overscroll-behavior-y: none;
+}
+
 html {
-  background: #f0f0f0;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   scroll-padding-bottom: var(--app-nav-space);
