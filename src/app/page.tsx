@@ -646,6 +646,7 @@ export default function MiArgentinaApp() {
         {view === 'cobros' && <CobrosView />}
         {view === 'hijos' && <HijosView />}
         {view === 'tramites' && <TramitesView />}
+        {view === 'turnos' && <TurnosView />}
         {view === 'trabajo' && <TrabajoView />}
         {view === 'vehiculos' && <VehiculosView />}
         {view === 'tina' && (
@@ -1514,6 +1515,11 @@ function HomeView() {
     }
   };
 
+  const openTurnos = () => {
+    setView('turnos');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+
   const services = [
     { icon: '/icons/serv-tramites.webp', label: 'Documentos', action: () => setView('documentos'), w: 49, h: 49, scale: 1.8 },
     { icon: '/icons/serv-vehiculos.webp', label: 'Vehículos', action: () => setView('vehiculos'), w: 79, h: 81, scale: 1.8 },
@@ -1521,7 +1527,7 @@ function HomeView() {
     { icon: '/icons/serv-salud.webp', label: 'Salud', action: () => setView('salud'), w: 52, h: 52, scale: 1 },
     { icon: '/icons/serv-cobros.webp', label: 'Cobros', action: () => setView('cobros'), w: 48, h: 48, scale: 1.8 },
     { icon: '/icons/serv-documentos.webp', label: 'Trámites', action: () => setView('tramites'), w: 48, h: 48, scale: 1.8 },
-    { icon: '/icons/serv-turnos.webp', label: 'Turnos', action: () => {}, w: 52, h: 52, scale: 1 },
+    { icon: '/icons/serv-turnos.webp', label: 'Turnos', action: openTurnos, w: 52, h: 52, scale: 1 },
     { icon: '/icons/serv-hijos.webp', label: 'Hijos', action: () => setView('hijos'), w: 45, h: 45, scale: 1.8 },
   ];
 
@@ -1540,7 +1546,7 @@ function HomeView() {
         </div>
         <div className="home-turnos-copy">
           <p>No tenés turnos programados.</p>
-          <span>Solicitalo acá</span>
+          <button onClick={openTurnos}>Solicitalo acá</button>
         </div>
       </div>
 
@@ -1614,6 +1620,41 @@ function HomeView() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ========================================
+// TURNOS VIEW
+// ========================================
+function TurnosView() {
+  const { setView } = useAppStore();
+
+  return (
+    <div className="turnos-view app-screen">
+      <header className="documents-header">
+        <button onClick={() => { setView('home'); window.scrollTo({ top: 0, behavior: 'instant' }); }} aria-label="Volver a Inicio" className="documents-back">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M19 12H5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M12 19L5 12L12 5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        <h1>Turnos</h1>
+      </header>
+
+      <section className="turnos-card" aria-labelledby="turnos-empty-title">
+        <div className="turnos-illustration" aria-hidden="true">
+          <img src="/icons/serv-turnos.webp" alt="" />
+          <svg className="turnos-check" viewBox="0 0 32 32" fill="none">
+            <circle cx="16" cy="16" r="13.5" fill="white" stroke="#32b970" strokeWidth="3.5" />
+            <path d="m9 16 5 5 9-11" stroke="#32b970" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+        <h2 id="turnos-empty-title">No tenés turnos programados.</h2>
+        <a className="turnos-book" href="https://www.argentina.gob.ar/turnos" target="_blank" rel="noopener noreferrer">Sacar turno</a>
+      </section>
+
+      <BottomNavBar activeTab="home" />
     </div>
   );
 }

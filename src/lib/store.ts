@@ -27,7 +27,7 @@ export interface UserData {
   dni: DniData | null;
 }
 
-export type AppView = 'login' | 'register' | 'home' | 'install-guide' | 'documentos' | 'dni-viewer' | 'admin' | 'novedades' | 'telefonos' | 'trabajo' | 'vehiculos' | 'salud' | 'cobros' | 'hijos' | 'tramites' | 'tina';
+export type AppView = 'login' | 'register' | 'home' | 'install-guide' | 'documentos' | 'dni-viewer' | 'admin' | 'novedades' | 'telefonos' | 'trabajo' | 'vehiculos' | 'salud' | 'cobros' | 'hijos' | 'tramites' | 'turnos' | 'tina';
 
 interface AppState {
   view: AppView;

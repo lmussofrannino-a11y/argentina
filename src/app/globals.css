@@ -370,6 +370,81 @@ html {
   outline-offset: -3px;
 }
 
+.turnos-view {
+  --documents-unit: calc(100cqw / 440);
+  --turnos-unit: var(--documents-unit);
+  background: #f0f0f0;
+  color: #333;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+.turnos-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: calc(18 * var(--turnos-unit));
+  padding: calc(28 * var(--turnos-unit)) calc(30 * var(--turnos-unit))
+    calc(30 * var(--turnos-unit));
+  border-radius: calc(8 * var(--turnos-unit));
+  background: #fff;
+  box-shadow: 0 1px 4px #00000026;
+  text-align: center;
+}
+
+.turnos-illustration {
+  position: relative;
+  width: calc(90 * var(--turnos-unit));
+  height: calc(100 * var(--turnos-unit));
+  flex-shrink: 0;
+}
+
+.turnos-illustration img {
+  position: absolute;
+  left: calc(-26 * var(--turnos-unit));
+  top: calc(-7 * var(--turnos-unit));
+  width: calc(130 * var(--turnos-unit));
+  height: calc(130 * var(--turnos-unit));
+  max-width: none;
+  object-fit: contain;
+}
+
+.turnos-check {
+  position: absolute;
+  top: 0;
+  left: calc(50 * var(--turnos-unit));
+  width: calc(30 * var(--turnos-unit));
+  height: calc(30 * var(--turnos-unit));
+}
+
+.turnos-card h2 {
+  margin: calc(20 * var(--turnos-unit)) 0;
+  font-size: clamp(16px, calc(20 * var(--turnos-unit)), 29px);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.turnos-book {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(100% - 62 * var(--turnos-unit));
+  min-height: 44px;
+  height: calc(44 * var(--turnos-unit));
+  padding: calc(6 * var(--turnos-unit)) calc(8 * var(--turnos-unit));
+  border-radius: 999px;
+  background: #362fc1;
+  color: #fff;
+  font-size: clamp(12px, calc(16 * var(--turnos-unit)), 23px);
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.turnos-book:focus-visible {
+  outline: 3px solid #7098db;
+  outline-offset: 3px;
+}
+
 /* Measurements follow the reference's 440 CSS-pixel composition, not a phone model. */
 .home-view {
   --home-unit: calc(100cqw / 440);
@@ -477,7 +552,7 @@ html {
   line-height: 1.35;
 }
 
-.home-turnos-copy span {
+.home-turnos-copy button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -487,6 +562,9 @@ html {
   font-weight: 600;
   color: #fff;
   background: #3d30cf;
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
 }
 
 .home-credentials {
