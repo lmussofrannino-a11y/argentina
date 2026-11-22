@@ -159,9 +159,54 @@ html {
 }
 
 .app-bottom-nav {
+  --bottom-nav-inset: clamp(16px, var(--app-safe-bottom), 24px);
   max-width: var(--app-max-width);
-  padding: 6px env(safe-area-inset-right, 0px)
-    calc(4px + var(--app-safe-bottom)) env(safe-area-inset-left, 0px);
+  height: calc(48px + var(--bottom-nav-inset));
+  box-sizing: border-box;
+  border: 2px solid #e0e0e0;
+  padding: 0 env(safe-area-inset-right, 0px)
+    var(--bottom-nav-inset) env(safe-area-inset-left, 0px);
+}
+
+.bottom-nav-items {
+  display: flex;
+  width: 100%;
+  height: 44px;
+}
+
+.bottom-nav-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  min-height: 44px;
+  gap: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.bottom-nav-icon-slot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.bottom-nav-icon-slot > .bottom-nav-icon,
+.bottom-nav-icon-slot > img {
+  transform: scale(0.8);
+}
+
+.bottom-nav-label {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 /* Document card proportions are relative to the canvas, with 440px as reference. */

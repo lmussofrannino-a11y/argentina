@@ -1426,12 +1426,11 @@ function BottomNavBar({ activeTab }: { activeTab: BottomTab }) {
       transform: 'translateX(-50%)',
       width: '100%',
       background: '#fff',
-      borderTop: '1px solid #e0e0e0',
       display: 'flex',
       flexDirection: 'column',
       zIndex: 50,
     }}>
-      <div style={{ display: 'flex', width: '100%', paddingBottom: '4px' }}>
+      <div className="bottom-nav-items">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.key;
           const needsActivation = tab.key === 'tina' && documentInactive;
@@ -1444,9 +1443,9 @@ function BottomNavBar({ activeTab }: { activeTab: BottomTab }) {
               aria-current={isActive ? 'page' : undefined}
               aria-label={needsActivation ? 'Tina: documento inactivo. Activá tu documento.' : tab.label}
               title={needsActivation ? 'Documento inactivo: entrá a Tina para activarlo' : undefined}
-              style={{ background: needsActivation ? '#fff0b3' : 'none', border: needsActivation ? '2px solid #e5b349' : '2px solid transparent', borderRadius: '10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', minHeight: '56px', minWidth: 0, flex: 1 }}
+              style={{ background: needsActivation ? '#fff0b3' : 'none', border: needsActivation ? '2px solid #e5b349' : '2px solid transparent', borderRadius: '10px' }}
             >
-              <div style={{ height: '37px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+              <div className="bottom-nav-icon-slot">
                 {tab.key === 'tina' ? (
                   <img src={iconSrc} alt="" aria-hidden="true" style={{ ...tab.iconStyle, maxWidth: '100%', objectFit: 'contain' }} />
                 ) : (
@@ -1456,7 +1455,7 @@ function BottomNavBar({ activeTab }: { activeTab: BottomTab }) {
                   <span aria-hidden="true" style={{ position: 'absolute', top: '1px', left: 'calc(50% + 9px)', width: '16px', height: '16px', borderRadius: '50%', background: '#8a4600', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800, fontFamily: SYS_FONT }}>!</span>
                 )}
               </div>
-              <span style={{ fontSize: '12px', color: needsActivation ? '#703c00' : isActive ? '#362FC1' : '#757575', fontWeight: needsActivation || isActive ? 700 : 400, fontFamily: SYS_FONT }}>{tab.label}</span>
+              <span className="bottom-nav-label" style={{ color: needsActivation ? '#703c00' : isActive ? '#362FC1' : '#757575', fontWeight: needsActivation || isActive ? 700 : 600, fontFamily: SYS_FONT }}>{tab.label}</span>
             </button>
           );
         })}
@@ -2148,33 +2147,32 @@ function DniViewerView() {
         transform: 'translateX(-50%)',
         width: '100%',
         background: '#fff',
-        borderTop: '1px solid #e0e0e0',
         display: 'flex',
         zIndex: 50,
       }}>
-        <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
-          <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <button className="bottom-nav-tab" onClick={() => setView('home')} style={{ background: 'none', border: 'none' }}>
+          <div className="bottom-nav-icon-slot">
             <img src="/icons/logo-CASA.webp" alt="Inicio" style={{ height: '30px', width: '26px', objectFit: 'contain' }} />
           </div>
-          <span style={{ fontSize: '12px', color: '#362FC1', fontWeight: 600, fontFamily: SYS_FONT }}>Inicio</span>
+          <span className="bottom-nav-label" style={{ color: '#362FC1', fontWeight: 600, fontFamily: SYS_FONT }}>Inicio</span>
         </button>
-        <button style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
-          <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <button className="bottom-nav-tab" style={{ background: 'none', border: 'none' }}>
+          <div className="bottom-nav-icon-slot">
             <img src="/icons/logo-NOVEDADES.webp" alt="Novedades" style={{ height: '37px', width: '80px', marginLeft: '3px', objectFit: 'contain' }} />
           </div>
-          <span style={{ fontSize: '12px', color: '#757575', fontFamily: SYS_FONT }}>Novedades</span>
+          <span className="bottom-nav-label" style={{ color: '#757575', fontFamily: SYS_FONT }}>Novedades</span>
         </button>
-        <button style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
-          <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <button className="bottom-nav-tab" style={{ background: 'none', border: 'none' }}>
+          <div className="bottom-nav-icon-slot">
             <img src="/icons/logo-TELEFONO.webp" alt="Teléfonos" style={{ height: '37px', width: '50px', marginLeft: '-3px', objectFit: 'contain' }} />
           </div>
-          <span style={{ fontSize: '12px', color: '#757575', fontFamily: SYS_FONT }}>Teléfonos</span>
+          <span className="bottom-nav-label" style={{ color: '#757575', fontFamily: SYS_FONT }}>Teléfonos</span>
         </button>
-        <button style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
-          <div style={{ height: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <button className="bottom-nav-tab" style={{ background: 'none', border: 'none' }}>
+          <div className="bottom-nav-icon-slot">
             <img src="/icons/logo-USUARIO.webp" alt="Usuario" style={{ height: '30px', width: '24px', objectFit: 'contain' }} />
           </div>
-          <span style={{ fontSize: '12px', color: '#757575', fontFamily: SYS_FONT }}>Usuario</span>
+          <span className="bottom-nav-label" style={{ color: '#757575', fontFamily: SYS_FONT }}>Usuario</span>
         </button>
       </div>
     </div>
