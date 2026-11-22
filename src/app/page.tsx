@@ -33,6 +33,9 @@ import {
   Timer,
   Zap,
   CreditCard,
+  IdCard,
+  Banknote,
+  UsersRound,
   Download,
   Share,
   Smartphone,
@@ -619,14 +622,14 @@ export default function MiArgentinaApp() {
   if (!_hasHydrated) {
     return (
       <div className="min-h-screen w-full flex justify-center bg-white">
-        <div className="w-full" style={{ maxWidth: '390px', overflow: 'hidden', minHeight: '100vh' }} />
+        <div className="app-shell" />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen w-full flex justify-center bg-white">
-      <div className="w-full" style={{ maxWidth: '390px', overflow: 'hidden', minHeight: '100vh', position: 'relative' }}>
+      <div className="app-shell">
         {view === 'login' && <LoginView />}
         {view === 'register' && <RegisterView />}
         {view === 'install-guide' && (
@@ -1372,37 +1375,22 @@ function DniPreviewCard({ nombre, apellido, dniNumero, sexo, nacimiento, fechaEm
 // BOTTOM NAVIGATION BAR (shared component)
 // ========================================
 function StatusBar() {
-  return (
-    <div style={{
-      height: '44px',
-      width: '100%',
-      background: '#362FC1',
-    }} />
-  );
+  // The shell reserves the actual OS safe area; Safari supplies its own status bar.
+  return null;
 }
 
 function HeaderBar({ onLogoTap, onMenuClick }: { onLogoTap?: () => void; onMenuClick?: () => void }) {
   return (
-    <div style={{
-      background: '#362FC1',
-      height: '60px',
-      width: '100%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '0 16px',
-      position: 'relative',
-      userSelect: 'none',
-    }}>
+    <div className="app-header">
       <button onClick={onMenuClick} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}>
         <Menu size={26} color="#fff" />
       </button>
 
-      <span onClick={onLogoTap} style={{ color: '#fff', fontSize: '26px', fontWeight: 700, fontFamily: SYS_FONT, cursor: onLogoTap ? 'pointer' : 'default', userSelect: 'none', position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
+      <span onClick={onLogoTap} style={{ color: '#fff', fontWeight: 700, fontFamily: SYS_FONT, cursor: onLogoTap ? 'pointer' : 'default', userSelect: 'none', position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
         <span style={{ color: '#7098DB' }}>mi</span>Argentina
       </span>
 
-      <div style={{ width: '38px', height: '38px', borderRadius: '50%', overflow: 'hidden' }}>
+      <div style={{ borderRadius: '50%', overflow: 'hidden' }}>
          <img src="/icons/profile-user.webp" alt="Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       </div>
     </div>
@@ -1422,18 +1410,16 @@ function BottomNavBar({ activeTab }: { activeTab: BottomTab }) {
   ];
 
   return (
-    <div style={{
+    <div className="app-bottom-nav" style={{
       position: 'fixed',
       bottom: 0,
       left: '50%',
       transform: 'translateX(-50%)',
       width: '100%',
-      maxWidth: '390px',
       background: '#fff',
       borderTop: '1px solid #e0e0e0',
       display: 'flex',
       flexDirection: 'column',
-      padding: '6px 0 0px',
       zIndex: 50,
     }}>
       <div style={{ display: 'flex', width: '100%', paddingBottom: '4px' }}>
@@ -1516,29 +1502,38 @@ function HomeView() {
   };
 
   const services = [
-    { icon: '/icons/serv-tramites.webp', label: 'Documentos', action: () => setView('documentos'), w: 49, h: 49, scale: true },
-    { icon: '/icons/serv-vehiculos.webp', label: 'Vehículos', action: () => setView('vehiculos'), w: 79, h: 81, scale: true },
-    { icon: '/icons/serv-trabajo.webp', label: 'Trabajo', action: () => setView('trabajo'), w: 42, h: 44, scale: true },
-    { icon: '/icons/serv-salud.webp', label: 'Salud', action: () => setView('salud') },
-    { icon: '/icons/serv-cobros.webp', label: 'Cobros', action: () => setView('cobros'), w: 48, h: 48, scale: true },
-    { icon: '/icons/serv-documentos.webp', label: 'Trámites', action: () => setView('tramites'), w: 48, h: 48, scale: true },
-    { icon: '/icons/serv-turnos.webp', label: 'Turnos', action: () => {} },
-    { icon: '/icons/serv-hijos.webp', label: 'Hijos', action: () => setView('hijos'), w: 45, h: 45, scale: true },
+    { icon: IdCard, label: 'Documentos', action: () => setView('documentos') },
+    { icon: Car, label: 'Vehículos', action: () => setView('vehiculos') },
+    { icon: Briefcase, label: 'Trabajo', action: () => setView('trabajo') },
+    { icon: Heart, label: 'Salud', action: () => setView('salud') },
+    { icon: Banknote, label: 'Cobros', action: () => setView('cobros') },
+    { icon: FileText, label: 'Trámites', action: () => setView('tramites') },
+    { icon: Ticket, label: 'Turnos', action: () => {} },
+    { icon: UsersRound, label: 'Hijos', action: () => setView('hijos') },
   ];
 
   return (
-    <div style={{ backgroundColor: '#f0f0f0', minHeight: '100vh', paddingBottom: '70px' }}>
+    <div className="home-view app-screen" style={{ backgroundColor: '#f0f0f0' }}>
       <StatusBar />
       <HeaderBar onLogoTap={handleLogoTap} onMenuClick={() => useAppStore.getState().setMenuOpen(true)} />
 
-      {/* Greeting section - taller violet bar so credentials card can overlap its lower portion */}
-      <div style={{ background: '#362FC1', textAlign: 'center', paddingTop: '3.5%', paddingBottom: '6%', borderBottomLeftRadius: '30px', borderBottomRightRadius: '30px', position: 'relative', zIndex: 1 }}>
-        <h1 style={{ fontSize: '20px', fontWeight: 400, color: '#fff', fontFamily: SYS_FONT, margin: 0, padding: '0 16px' }}>¡Hola {nombre}!</h1>
+      <div className="home-greeting">
+        <h1>¡Hola {nombre}!</h1>
+      </div>
+
+      <div className="home-turnos">
+        <div className="home-turnos-art" aria-hidden="true">
+          <img src="/card-turnos.webp" alt="" />
+        </div>
+        <div className="home-turnos-copy">
+          <p>No tenés turnos programados.</p>
+          <span>Solicitalo acá</span>
+        </div>
       </div>
 
       {/* Pending activation notice */}
       {!isActive && (
-        <div style={{ background: '#fff3e0', margin: '12px 12px 0', borderRadius: '10px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', border: '1px solid #ffcc80', cursor: 'pointer' }} onClick={() => setView('tina')}>
+        <div style={{ background: '#fff3e0', margin: '16px var(--home-gutter) 0', borderRadius: '10px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', border: '1px solid #ffcc80', cursor: 'pointer' }} onClick={() => setView('tina')}>
           <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#ff9800', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Bell size={18} color="#fff" />
           </div>
@@ -1549,33 +1544,33 @@ function HomeView() {
         </div>
       )}
 
-      {/* Credentials Card Image - pulled up with negative margin to overlap the violet header's rounded bottom */}
-      <div style={{ margin: '-4% 12px 0', borderRadius: '10px', overflow: 'hidden', position: 'relative', zIndex: 2 }}>
-        <img src="/credenciales.webp" alt="Todas tus credenciales están al día" style={{ width: '100%', aspectRatio: '1077 / 298', objectFit: 'cover', display: 'block' }} />
+      <div className="home-credentials">
+        <p>¡Todas tus credenciales están al día!</p>
+        <div className="home-credentials-art" aria-hidden="true">
+          <img src="/credenciales.webp" alt="" />
+        </div>
       </div>
 
       {/* ¿Qué necesitás hoy? Section */}
-      <div style={{ margin: '12px 12px 0' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'rgb(51, 51, 51)', fontFamily: "'Mula Rounded', 'MulaRounded', sans-serif", margin: '16px 0 8px', textAlign: 'left' }}>¿Qué necesitás hoy?</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+      <section className="home-services" aria-labelledby="home-services-title">
+        <h2 id="home-services-title">¿Qué necesitás hoy?</h2>
+        <div className="home-service-grid">
           {services.map((s, i) => (
-            <button key={i} onClick={s.action} style={{ background: '#fff', border: 'none', borderRadius: '17px', aspectRatio: 'auto', height: '82px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', transition: 'transform 0.2s', fontFamily: SYS_FONT }}>
-              <div style={{ height: '60px', width: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img src={s.icon} alt={s.label} style={{ width: (s.w || 52) + 'px', height: (s.h || 52) + 'px', objectFit: 'contain', ...(s.scale ? { transform: 'scale(1.8)' } : {}) }} />
-              </div>
-              <span style={{ fontSize: '11px', color: 'rgb(51, 51, 51)', fontWeight: 700, fontFamily: "'Mula Rounded', 'MulaRounded', sans-serif", textAlign: 'center', lineHeight: 1.2, marginTop: '-3px' }}>{s.label}</span>
+            <button key={i} onClick={s.action} className="home-service">
+              <s.icon aria-hidden="true" strokeWidth={1.5} />
+              <span>{s.label}</span>
             </button>
           ))}
         </div>
-      </div>
+      </section>
 
       {/* Carrusel de carteles */}
-      <div className="hide-scrollbar" style={{ margin: '52px 12px 0', display: 'flex', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-        <div style={{ flex: '0 0 calc(100% - 40px)', marginRight: '8px', borderRadius: '17px', overflow: 'hidden' }}>
-          <img src="/perfil.webp" alt="Mantené tu perfil actualizado" style={{ width: '100%', aspectRatio: '1077 / 298', borderRadius: '17px', objectFit: 'cover', display: 'block' }} />
+      <div className="home-carousel hide-scrollbar" tabIndex={0} aria-label="Novedades y recordatorios">
+        <div>
+          <img src="/perfil.webp" alt="Mantené tu perfil actualizado" />
         </div>
-        <div style={{ flex: '0 0 calc(100% - 40px)', borderRadius: '17px', overflow: 'hidden' }}>
-          <img src="/cartel-secundario.webp" alt="Más información" style={{ width: '100%', aspectRatio: '1077 / 298', borderRadius: '17px', objectFit: 'cover', display: 'block' }} />
+        <div>
+          <img src="/cartel-secundario.webp" alt="Más información" />
         </div>
       </div>
 
@@ -1629,7 +1624,7 @@ function DocumentosView() {
   }, []);
 
   return (
-    <div style={{ backgroundColor: '#f5f6fa', minHeight: '100vh', paddingBottom: '70px' }}>
+    <div className="app-screen" style={{ backgroundColor: '#f5f6fa' }}>
       <header style={{ background: '#3333cc', display: 'flex', alignItems: 'center', padding: '55px 16px 16px', position: 'sticky', top: 0, zIndex: 50 }}>
         <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', marginRight: '16px', padding: 0 }}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -1832,7 +1827,7 @@ function DniViewerView() {
   const fullName = `${dni.apellido} ${dni.nombre}`.split(' ').map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
 
   return (
-    <div style={{ backgroundColor: '#f0f0f0', minHeight: '100vh', paddingBottom: '70px' }}>
+    <div className="app-screen" style={{ backgroundColor: '#f0f0f0' }}>
       {/* Header - matches Header_container--internal from real app */}
       <header style={{ background: '#362FC1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '55px 16px 16px', position: 'sticky', top: 0, zIndex: 50 }}>
         <button onClick={() => setView('documentos')} style={{ background: 'none', border: 0, cursor: 'pointer', padding: 0 }}><ArrowLeft size={24} color="#fff" /></button>
@@ -1864,7 +1859,7 @@ function DniViewerView() {
                 {showFront ? (
                   /* ======== FRONT OF DNI ======== */
                   <div className="DNI_content1" style={{ alignItems: 'center', display: 'flex', flexDirection: 'column', transformStyle: 'preserve-3d', width: '100%' }}>
-                    <div className="DNI_imgs" style={{ aspectRatio: '1318 / 833', position: 'relative', width: 'calc(min(100vw, 390px) - 74px)', backfaceVisibility: 'hidden', transform: 'translateZ(0)', zIndex: 2 }}>
+                    <div className="DNI_imgs" style={{ aspectRatio: '1318 / 833', position: 'relative', width: '100%', backfaceVisibility: 'hidden', transform: 'translateZ(0)', zIndex: 2 }}>
                       <img className="DNI_IMG" src="/arg_front_new_bg.webp" alt="dni_img" style={{ objectFit: 'contain', width: '100%' }} />
 
                       {/* Profile photo */}
@@ -2007,7 +2002,7 @@ function DniViewerView() {
                   </div>
                 ) : (
                   /* ======== BACK OF DNI ======== */
-                  <div className="DNI_back" style={{ aspectRatio: '1320 / 833', position: 'relative', width: 'calc(min(100vw, 390px) - 74px)', backfaceVisibility: 'hidden', zIndex: 1 }}>
+                  <div className="DNI_back" style={{ aspectRatio: '1320 / 833', position: 'relative', width: '100%', backfaceVisibility: 'hidden', zIndex: 1 }}>
                     <img src="/dorso.webp" alt="back dni" style={{ objectFit: 'contain', width: '100%' }} />
 
                     {/* DOMICILIO */}
@@ -2088,17 +2083,15 @@ function DniViewerView() {
       </div>
 
       {/* Bottom navigation - matches Home_navContainer from real app */}
-      <div style={{
+      <div className="app-bottom-nav" style={{
         position: 'fixed',
         bottom: 0,
         left: '50%',
         transform: 'translateX(-50%)',
         width: '100%',
-        maxWidth: '390px',
         background: '#fff',
         borderTop: '1px solid #e0e0e0',
         display: 'flex',
-        padding: '6px 0 8px',
         zIndex: 50,
       }}>
         <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '2px 0', flex: 1 }}>
@@ -2476,7 +2469,7 @@ function NovedadesView() {
   const { setView } = useAppStore();
 
   return (
-    <div style={{ backgroundColor: '#f0f0f0', minHeight: '100vh', paddingBottom: '70px' }}>
+    <div className="app-screen" style={{ backgroundColor: '#f0f0f0' }}>
       <div style={{ background: '#3133B4' }}>
         <StatusBar />
         <div style={{ height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px' }}>
@@ -2534,7 +2527,7 @@ function TelefonosView() {
   ];
 
   return (
-    <div style={{ backgroundColor: '#efefef', minHeight: '100vh', paddingBottom: '70px' }}>
+    <div className="app-screen" style={{ backgroundColor: '#efefef' }}>
       <StatusBar />
       <HeaderBar onMenuClick={() => useAppStore.getState().setMenuOpen(true)} />
 
@@ -2615,7 +2608,7 @@ function SaludView() {
   const { setView } = useAppStore();
 
   return (
-    <div style={{ backgroundColor: '#f5f6fa', minHeight: '100vh', paddingBottom: '70px' }}>
+    <div className="app-screen" style={{ backgroundColor: '#f5f6fa' }}>
       <StatusBar />
       <header style={{ background: '#3333cc', color: 'white', padding: '55px 16px 16px', display: 'flex', alignItems: 'center', height: '60px', boxSizing: 'border-box', flexShrink: 0 }}>
         <svg onClick={() => setView('home')} style={{ marginRight: '16px', cursor: 'pointer', width: '24px', height: '24px' }} viewBox="0 0 24 24" fill="none">
@@ -2704,7 +2697,7 @@ function CobrosView() {
   const { setView } = useAppStore();
 
   return (
-    <div style={{ backgroundColor: '#f5f6fa', minHeight: '100vh', paddingBottom: '70px' }}>
+    <div className="app-screen" style={{ backgroundColor: '#f5f6fa' }}>
       <StatusBar />
       <header style={{ background: '#3333cc', color: 'white', padding: '55px 16px 16px', display: 'flex', alignItems: 'center', height: '60px', boxSizing: 'border-box', flexShrink: 0 }}>
         <svg onClick={() => setView('home')} style={{ marginRight: '16px', cursor: 'pointer', width: '24px', height: '24px' }} viewBox="0 0 24 24" fill="none">
@@ -2740,7 +2733,7 @@ function HijosView() {
   const { setView } = useAppStore();
 
   return (
-    <div style={{ backgroundColor: '#f5f6fa', minHeight: '100vh', paddingBottom: '70px' }}>
+    <div className="app-screen" style={{ backgroundColor: '#f5f6fa' }}>
       <StatusBar />
       <header style={{ background: '#3333cc', color: 'white', padding: '55px 16px 16px', display: 'flex', alignItems: 'center', height: '60px', boxSizing: 'border-box', flexShrink: 0 }}>
         <svg onClick={() => setView('home')} style={{ marginRight: '16px', cursor: 'pointer', width: '24px', height: '24px' }} viewBox="0 0 24 24" fill="none">
@@ -2777,7 +2770,7 @@ function TramitesView() {
   const { setView } = useAppStore();
 
   return (
-    <div style={{ backgroundColor: '#f5f6fa', minHeight: '100vh', paddingBottom: '70px' }}>
+    <div className="app-screen" style={{ backgroundColor: '#f5f6fa' }}>
       <StatusBar />
       <header style={{ background: '#3333cc', color: 'white', padding: '55px 16px 16px', display: 'flex', alignItems: 'center', height: '60px', boxSizing: 'border-box', flexShrink: 0 }}>
         <svg onClick={() => setView('home')} style={{ marginRight: '16px', cursor: 'pointer', width: '24px', height: '24px' }} viewBox="0 0 24 24" fill="none">
@@ -2846,7 +2839,7 @@ function TrabajoView() {
   const cuil = dniNumero ? `20${dniNumero.replace(/\D/g, '')}5` : '00000000000';
 
   return (
-    <div style={{ backgroundColor: '#f0f0f0', minHeight: '100vh', paddingBottom: '70px' }}>
+    <div className="app-screen" style={{ backgroundColor: '#f0f0f0' }}>
       {/* Header with back arrow */}
       <header style={{ background: '#362FC1', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '55px 16px 16px', position: 'sticky', top: 0, zIndex: 50 }}>
         <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', position: 'absolute', left: '16px', top: '55px' }}><ArrowLeft size={24} /></button>
@@ -2895,7 +2888,7 @@ function VehiculosView() {
   const { setView } = useAppStore();
 
   return (
-    <div style={{ backgroundColor: '#f0f0f0', minHeight: '100vh', paddingBottom: '70px' }}>
+    <div className="app-screen" style={{ backgroundColor: '#f0f0f0' }}>
       {/* Header with back arrow */}
       <header style={{ background: '#362FC1', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '55px 16px 16px', position: 'sticky', top: 0, zIndex: 50 }}>
         <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', position: 'absolute', left: '16px', top: '55px' }}><ArrowLeft size={24} /></button>
@@ -3229,7 +3222,7 @@ function TinaView({
   }
 
   return (
-    <div style={{ backgroundColor: '#f0f0f0', minHeight: '100vh', paddingBottom: '70px' }}>
+    <div className="app-screen" style={{ backgroundColor: '#f0f0f0' }}>
       <header style={{ background: '#362FC1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '55px 16px 16px', position: 'sticky', top: 0, zIndex: 50 }}>
         <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}><ArrowLeft size={24} /></button>
         <span style={{ color: '#fff', fontSize: '17px', fontWeight: 600, fontFamily: SYS_FONT }}>Tina</span>
