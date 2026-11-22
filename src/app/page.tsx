@@ -1639,18 +1639,18 @@ function DocumentosView() {
   }, []);
 
   return (
-    <div className="app-screen" style={{ backgroundColor: '#f5f6fa' }}>
-      <header style={{ background: '#3333cc', display: 'flex', alignItems: 'center', padding: '55px 16px 16px', position: 'sticky', top: 0, zIndex: 50 }}>
-        <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', marginRight: '16px', padding: 0 }}>
+    <div className="documents-view app-screen">
+      <header className="documents-header">
+        <button onClick={() => setView('home')} aria-label="Volver a Inicio" className="documents-back">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
             <path d="M19 12H5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M12 19L5 12L12 5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-        <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#fff', fontFamily: SYS_FONT }}>Documentos</h1>
+        <h1>Documentos</h1>
       </header>
 
-      <div style={{ padding: '20px', maxWidth: '375px', margin: '0 auto' }}>
+      <div className="documents-content">
         {!isActive && (
           <div style={{ background: '#fff3e0', borderRadius: '10px', padding: '14px 16px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '12px', border: '1px solid #ffcc80' }}>
             <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#ff9800', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -1662,50 +1662,51 @@ function DocumentosView() {
             </div>
           </div>
         )}
-        <div style={{ background: '#fff', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden', marginBottom: '20px' }}>
-          <button onClick={() => dni ? setDniExpanded(!dniExpanded) : null} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', border: 'none', borderBottom: dniExpanded ? '1px solid #f0f0f0' : 'none', background: 'none', cursor: dni ? 'pointer' : 'default', textAlign: 'left' }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <img src="/icons/dni-icon.webp" alt="DNI" style={{ width: '66.248px', height: '47.32px', marginRight: '16px' }} />
-              <div style={{ width: '2px', height: '36px', backgroundColor: '#ddd', marginRight: '12px' }} />
-              <div>
-                <div style={{ fontSize: '14px', color: '#757575', marginBottom: '2px', fontFamily: SYS_FONT }}>Mis documentos</div>
-                <div style={{ fontSize: '16px', fontWeight: 700, color: '#333', lineHeight: 1.3, maxWidth: '200px', fontFamily: SYS_FONT }}>Documento Nacional de Identidad (DNI)</div>
-              </div>
+        <div className="documents-card">
+          <button onClick={() => dni ? setDniExpanded(!dniExpanded) : null} className="documents-summary" aria-expanded={dniExpanded} aria-controls="documents-dni-details">
+            <div className="documents-dni-icon">
+              <img src="/icons/dni-icon.webp" alt="DNI" />
             </div>
+            <div className="documents-summary-divider" aria-hidden="true" />
+            <span className="documents-summary-title">Documento Nacional de Identidad<br />(DNI)</span>
             {dni && (
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <svg className="documents-chevron" width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <path d={dniExpanded ? "M18 15L12 9L6 15" : "M6 9L12 15L18 9"} stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             )}
           </button>
           {dniExpanded && (
-            <div style={{ padding: '24px 16px', textAlign: 'center' }}>
-              {isActive ? (
-                <button onClick={() => dni && setView('dni-viewer')} style={{ width: '100%', background: '#3333cc', color: '#fff', border: 'none', padding: '10px', borderRadius: '25px', fontSize: '14px', fontWeight: 600, cursor: dni ? 'pointer' : 'default', fontFamily: SYS_FONT, marginBottom: '24px' }}>
-                  Ver DNI Digital
-                </button>
-              ) : (
-                <div style={{ background: '#fff3e0', borderRadius: '10px', padding: '14px 16px', marginBottom: '24px', border: '1px solid #ffcc80' }}>
-                  <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#e65100', fontFamily: SYS_FONT }}>Sin tokens disponibles</p>
-                  <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#bf360c', fontFamily: SYS_FONT, lineHeight: 1.4 }}>Necesitás tokens para ver tu DNI digital. Conseguilos en la sección Tina.</p>
+            <div id="documents-dni-details">
+              <div className="documents-access">
+                {isActive ? (
+                  <button onClick={() => dni && setView('dni-viewer')} className="documents-action documents-action-primary">
+                    Ver DNI Digital
+                  </button>
+                ) : (
+                  <div style={{ background: '#fff3e0', borderRadius: '10px', padding: '14px 16px', marginBottom: '24px', border: '1px solid #ffcc80' }}>
+                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#e65100', fontFamily: SYS_FONT }}>Sin tokens disponibles</p>
+                    <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#bf360c', fontFamily: SYS_FONT, lineHeight: 1.4 }}>Necesitás tokens para ver tu DNI digital. Conseguilos en la sección Tina.</p>
+                  </div>
+                )}
+                <div className="documents-provider">
+                  Datos suministrados por <span>RENAPER</span>
                 </div>
-              )}
-              <div style={{ fontSize: '12px', color: '#757575', marginBottom: '40px', fontFamily: SYS_FONT }}>
-                Datos suministrados por <span style={{ color: '#33a1de', fontWeight: 600 }}>RENAPER</span>
               </div>
-              <div style={{ fontSize: '14px', color: '#666', lineHeight: 1.5, marginBottom: '20px', textAlign: 'left', padding: '0 8px', fontFamily: SYS_FONT }}>
-                Recordá que podés solicitar el DNI para vos y tus hijos y tenerlos disponibles en la App.
+              <div className="documents-request">
+                <p>
+                  Recordá que podés solicitar el DNI para vos y tus hijos y tenerlos disponibles en la App.
+                </p>
+                <button className="documents-action documents-action-outline">
+                  Solicitar DNI Digital
+                </button>
               </div>
-              <button style={{ width: '100%', background: '#fff', color: '#3333cc', border: '2px solid #3333cc', padding: '12px', borderRadius: '25px', fontSize: '16px', fontWeight: 600, cursor: 'pointer', fontFamily: SYS_FONT, marginBottom: '12px' }}>
-                Solicitar DNI Digital
-              </button>
             </div>
           )}
-          <button style={{ display: 'flex', alignItems: 'center', border: 'none', background: 'none', padding: '16px', width: '100%', cursor: 'pointer', fontFamily: SYS_FONT, borderTop: '1px solid #f0f0f0' }}>
-            <span style={{ color: '#3333cc', fontSize: '20px', marginRight: '12px', display: 'flex', alignItems: 'center' }}>
-              <img src="/icons/help-dispositivo.webp" alt="Ayuda" style={{ width: '39px', height: '39px' }} />
+          <button className="documents-device-help">
+            <span className="documents-help-icon">
+              <img src="/icons/help-dispositivo.webp" alt="Ayuda" />
             </span>
-            <span style={{ color: '#3333cc', fontSize: '14px', fontWeight: 500, fontFamily: SYS_FONT }}>Cambié o voy a cambiar de dispositivo</span>
+            <span>Cambié o voy a cambiar de dispositivo</span>
           </button>
         </div>
 
