@@ -161,6 +161,20 @@ body:has(.app-viewport--home) {
   background-color: #362fc1;
 }
 
+/* Standalone iOS may leave the bottom safe area outside fixed body children. */
+@media (display-mode: standalone) {
+  html:has(.app-viewport--home)::after {
+    content: '';
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    height: env(safe-area-inset-bottom, 0px);
+    background: #fff;
+    pointer-events: none;
+    z-index: 49;
+  }
+}
+
 /* Insets own the height: do not combine them with dvh in standalone WebKit. */
 .app-viewport--home {
   position: fixed;
