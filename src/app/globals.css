@@ -123,7 +123,7 @@ nextjs-portal {
   --app-max-width: 640px;
   --app-safe-bottom: env(safe-area-inset-bottom, 0px);
   --app-nav-space: calc(78px + var(--app-safe-bottom));
-  --screen-slide-duration: 280ms;
+  --screen-slide-duration: 400ms;
   --screen-slide-easing: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -690,6 +690,64 @@ body:has(.app-viewport--home) {
   gap: calc(12 * var(--home-unit));
   padding-inline: calc(30 * var(--home-unit));
   background: #caecdd;
+}
+
+.document-edit-hint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid #d7d4ff;
+  border-radius: 10px;
+  background: #eef0ff;
+  color: #292477;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.document-edit-hint > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.document-edit-hint-title {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.document-edit-hint-copy {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.document-edit-hint button {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: #362fc1;
+  color: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.document-edit-hint button:focus-visible {
+  outline: 3px solid #7098db;
+  outline-offset: 2px;
+}
+
+.home-document-edit-hint {
+  min-height: calc(100 * var(--home-unit));
+  margin: calc(16 * var(--home-unit)) var(--home-gutter) 0;
+}
+
+.documents-edit-hint {
+  margin-bottom: 12px;
 }
 
 .home-credentials p {

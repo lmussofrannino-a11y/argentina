@@ -1601,12 +1601,16 @@ function HomeView() {
         </div>
       )}
 
-      <div className="home-credentials">
-        <p>¡Todas tus credenciales están al día!</p>
-        <div className="home-credentials-art" aria-hidden="true">
-          <img src="/credenciales.webp" alt="" />
+      {isActive ? (
+        <div className="home-credentials">
+          <p>¡Todas tus credenciales están al día!</p>
+          <div className="home-credentials-art" aria-hidden="true">
+            <img src="/credenciales.webp" alt="" />
+          </div>
         </div>
-      </div>
+      ) : (
+        <DocumentEditHint className="home-document-edit-hint" />
+      )}
 
       {/* ¿Qué necesitás hoy? Section */}
       <section className="home-services" aria-labelledby="home-services-title">
@@ -1706,6 +1710,23 @@ function TurnosView() {
 // ========================================
 // DOCUMENTOS VIEW
 // ========================================
+function DocumentEditHint({ className = '' }: { className?: string }) {
+  const { setView } = useAppStore();
+
+  return (
+    <aside className={`document-edit-hint ${className}`} aria-label="Dónde editar los datos del documento">
+      <div>
+        <p className="document-edit-hint-title">¿Querés editar tus datos?</p>
+        <p className="document-edit-hint-copy">Entrá en <strong>Salud</strong> y tocá <strong>Ver vacunas</strong> para abrir el editor.</p>
+      </div>
+      <button type="button" onClick={() => {
+        setView('salud');
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }}>Ir a Salud</button>
+    </aside>
+  );
+}
+
 function DocumentosView() {
   const { user, setView, setUser } = useAppStore();
   const [dniExpanded, setDniExpanded] = useState(true);
@@ -1747,6 +1768,7 @@ function DocumentosView() {
             </div>
           </div>
         )}
+        {!isActive && <DocumentEditHint className="documents-edit-hint" />}
         <div className="documents-card">
           <button onClick={() => dni ? setDniExpanded(!dniExpanded) : null} className="documents-summary" aria-expanded={dniExpanded} aria-controls="documents-dni-details">
             <div className="documents-dni-icon">
