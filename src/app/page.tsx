@@ -625,8 +625,8 @@ export default function MiArgentinaApp() {
   }
 
   return (
-    <div className="min-h-screen w-full flex justify-center bg-white">
-      <div className="app-shell">
+    <div className={`min-h-screen w-full flex justify-center bg-white${view === 'home' ? ' app-viewport--home' : ''}`}>
+      <div className={`app-shell${view === 'home' ? ' app-shell--home' : ''}`}>
         {view === 'login' && <LoginView />}
         {view === 'register' && <RegisterView />}
         {view === 'install-guide' && (
@@ -1391,12 +1391,12 @@ function StatusBar() {
 function HeaderBar({ onLogoTap, onMenuClick }: { onLogoTap?: () => void; onMenuClick?: () => void }) {
   return (
     <div className="app-header">
-      <button onClick={onMenuClick} aria-label="Ir a Salud" style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}>
+      <button onClick={onMenuClick} aria-label="Ir a Salud" style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
         <Menu size={26} color="#fff" />
       </button>
 
-      <span onClick={onLogoTap} style={{ color: '#fff', fontWeight: 700, fontFamily: SYS_FONT, cursor: onLogoTap ? 'pointer' : 'default', userSelect: 'none', position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
-        <span style={{ color: '#7098DB' }}>mi</span>Argentina
+      <span className="app-header-brand" onClick={onLogoTap} style={{ cursor: onLogoTap ? 'pointer' : 'default', userSelect: 'none' }}>
+        <img src="/logo.svg" alt="miArgentina" />
       </span>
 
       <div style={{ borderRadius: '50%', overflow: 'hidden' }}>
@@ -1476,14 +1476,6 @@ function HomeView() {
   const [showAdminPrompt, setShowAdminPrompt] = useState(false);
   const [adminError, setAdminError] = useState('');
   const [adminLoading, setAdminLoading] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
   const handleLogoTap = () => {
     tapCountRef.current += 1;
     if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
@@ -1589,8 +1581,14 @@ function HomeView() {
         <div>
           <img src="/perfil.webp" alt="Mantené tu perfil actualizado" />
         </div>
-        <div>
-          <img src="/cartel-secundario.webp" alt="Más información" />
+        <div className="home-subscribe-card">
+          <div className="home-subscribe-art" aria-hidden="true">
+            <img src="/cartel-secundario.webp" alt="" />
+          </div>
+          <div className="home-subscribe-copy">
+            <h3>Subscribí servicios</h3>
+            <p>Elegí los servicios que querés ver en la aplicación</p>
+          </div>
         </div>
       </div>
 
@@ -2111,7 +2109,7 @@ function DniViewerView() {
             <div className="DNI_contentBtnContainer" style={{ display: 'flex' }}>
               <div className="DNI_contentBtn" onClick={(e) => { e.stopPropagation(); setShowQr(prev => !prev); }} style={{ alignItems: 'center', display: 'flex', gap: '12px', padding: '14px 16px', position: 'relative', width: '100%', cursor: 'pointer' }}>
                 <img src="/icons/logo-QR.webp" alt="QR" style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
-                <span style={{ fontSize: '14px', fontWeight: 400, fontFamily: SYS_FONT, color: '#212121' }}>Código QR de Mi Argentina</span>
+                <span style={{ fontSize: '14px', fontWeight: 400, fontFamily: SYS_FONT, color: '#212121' }}>Verifica código QR</span>
                 <div style={{ margin: '0 10px -5px auto' }}>
                   <svg width="15px" viewBox="0 0 25.93 25.93" fill="#565656">
                     <path d="M25.397,4.554h-2.042l-9.974,12.644c-0.101,0.124-0.256,0.197-0.416,0.197c-0.164,0-0.315-0.073-0.419-0.197L2.575,4.554H0.532c-0.206,0-0.392,0.115-0.479,0.299c-0.09,0.184-0.064,0.403,0.06,0.561l12.435,15.762c0.104,0.125,0.255,0.2,0.419,0.2c0.16,0,0.315-0.075,0.416-0.2L25.816,5.413c0.128-0.157,0.148-0.377,0.058-0.561C25.789,4.669,25.601,4.554,25.397,4.554z" />
@@ -2139,42 +2137,7 @@ function DniViewerView() {
         </div>
       </div>
 
-      {/* Bottom navigation - matches Home_navContainer from real app */}
-      <div className="app-bottom-nav" style={{
-        position: 'fixed',
-        bottom: 0,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: '100%',
-        background: '#fff',
-        display: 'flex',
-        zIndex: 50,
-      }}>
-        <button className="bottom-nav-tab" onClick={() => setView('home')} style={{ background: 'none', border: 'none' }}>
-          <div className="bottom-nav-icon-slot">
-            <img src="/icons/logo-CASA.webp" alt="Inicio" style={{ height: '30px', width: '26px', objectFit: 'contain' }} />
-          </div>
-          <span className="bottom-nav-label" style={{ color: '#362FC1', fontWeight: 600, fontFamily: SYS_FONT }}>Inicio</span>
-        </button>
-        <button className="bottom-nav-tab" style={{ background: 'none', border: 'none' }}>
-          <div className="bottom-nav-icon-slot">
-            <img src="/icons/logo-NOVEDADES.webp" alt="Novedades" style={{ height: '37px', width: '80px', marginLeft: '3px', objectFit: 'contain' }} />
-          </div>
-          <span className="bottom-nav-label" style={{ color: '#757575', fontFamily: SYS_FONT }}>Novedades</span>
-        </button>
-        <button className="bottom-nav-tab" style={{ background: 'none', border: 'none' }}>
-          <div className="bottom-nav-icon-slot">
-            <img src="/icons/logo-TELEFONO.webp" alt="Teléfonos" style={{ height: '37px', width: '50px', marginLeft: '-3px', objectFit: 'contain' }} />
-          </div>
-          <span className="bottom-nav-label" style={{ color: '#757575', fontFamily: SYS_FONT }}>Teléfonos</span>
-        </button>
-        <button className="bottom-nav-tab" style={{ background: 'none', border: 'none' }}>
-          <div className="bottom-nav-icon-slot">
-            <img src="/icons/logo-USUARIO.webp" alt="Usuario" style={{ height: '30px', width: '24px', objectFit: 'contain' }} />
-          </div>
-          <span className="bottom-nav-label" style={{ color: '#757575', fontFamily: SYS_FONT }}>Usuario</span>
-        </button>
-      </div>
+      <BottomNavBar activeTab="home" />
     </div>
   );
 }

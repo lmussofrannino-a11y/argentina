@@ -153,6 +153,29 @@ html {
   padding-right: env(safe-area-inset-right, 0px);
 }
 
+/* Home is an app canvas, not a document scroller (including iOS edge bounce). */
+.app-viewport--home {
+  position: fixed;
+  inset: 0;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: pan-x;
+}
+
+.app-shell--home {
+  height: 100%;
+  min-height: 0;
+}
+
+.app-shell--home > .home-view {
+  height: 100%;
+  min-height: 0;
+  padding-bottom: calc(48px + clamp(16px, var(--app-safe-bottom), 24px));
+  overflow: hidden;
+}
+
 .app-screen {
   min-height: calc(100svh - env(safe-area-inset-top, 0px));
   padding-bottom: var(--app-nav-space);
@@ -511,17 +534,33 @@ html {
 }
 
 .home-view .app-header {
-  height: calc(44 * var(--home-unit));
-  min-height: 44px;
-  padding-inline: calc(12 * var(--home-unit));
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  grid-template-rows: minmax(0, 1fr);
+  height: calc(36 * var(--home-unit));
+  min-height: 36px;
+  padding-inline: calc(8 * var(--home-unit));
 }
 
-.app-header > span {
-  font-size: 26px;
+.app-header-brand {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: block;
+  width: 146px;
 }
 
-.home-view .app-header > span {
-  font-size: clamp(22px, calc(26 * var(--home-unit)), 36px);
+.app-header-brand img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.home-view .app-header-brand {
+  position: static;
+  transform: none;
+  justify-self: center;
+  width: calc(134 * var(--home-unit));
 }
 
 .app-header > div:last-child {
@@ -532,13 +571,30 @@ html {
 .app-header > button {
   min-width: 44px;
   min-height: 44px;
+  padding: 4px;
+}
+
+.home-view .app-header > button {
+  padding: 0;
+}
+
+.home-view .app-header > button svg {
+  width: calc(36 * var(--home-unit));
+  height: calc(36 * var(--home-unit));
+  stroke-width: 1.3333;
+}
+
+.home-view .app-header > div:last-child {
+  width: calc(44 * var(--home-unit));
+  height: calc(44 * var(--home-unit));
+  justify-self: end;
 }
 
 .home-greeting {
   background: #362fc1;
   text-align: center;
   padding: calc(5 * var(--home-unit)) var(--home-gutter)
-    calc(37 * var(--home-unit));
+    calc(35 * var(--home-unit));
   border-radius: 0 0 calc(28 * var(--home-unit)) calc(28 * var(--home-unit));
 }
 
@@ -561,7 +617,7 @@ html {
 
 .home-turnos {
   position: relative;
-  margin-top: calc(-17 * var(--home-unit));
+  margin-top: calc(-16 * var(--home-unit));
   background: #fff;
   aspect-ratio: 404 / 120;
   display: flex;
@@ -728,8 +784,9 @@ html {
 }
 
 .home-carousel > div {
-  flex: 0 0 92%;
+  flex: 0 0 calc(100% - 32 * var(--home-unit));
   min-width: 0;
+  height: calc(100 * var(--home-unit));
   overflow: hidden;
   border-radius: calc(8 * var(--home-unit));
   scroll-snap-align: start;
@@ -737,8 +794,69 @@ html {
 
 .home-carousel img {
   width: 100%;
-  height: auto;
+  height: 100%;
+  object-fit: cover;
   display: block;
+}
+
+.home-subscribe-card {
+  display: flex;
+  align-items: center;
+  gap: calc(18 * var(--home-unit));
+  padding-inline: calc(16 * var(--home-unit));
+  background: #d4d4d4;
+}
+
+.home-subscribe-art {
+  position: relative;
+  flex: 0 0 calc(92 * var(--home-unit));
+  height: calc(84 * var(--home-unit));
+  overflow: hidden;
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 85%, transparent 100%);
+  mask-image: radial-gradient(ellipse at center, #000 85%, transparent 100%);
+}
+
+.home-subscribe-art img {
+  position: absolute;
+  top: calc(-6 * var(--home-unit));
+  left: 0;
+  width: calc(250 * var(--home-unit));
+  max-width: none;
+  height: auto;
+}
+
+.home-subscribe-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.home-subscribe-copy h3 {
+  margin: 0 0 calc(8 * var(--home-unit));
+  font-size: clamp(12px, calc(16 * var(--home-unit)), 23px);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.home-subscribe-copy p {
+  margin: 0;
+  font-size: clamp(10px, calc(14 * var(--home-unit)), 20px);
+  line-height: 1.25;
+}
+
+/* Keep the complete Home canvas above the menu on short portrait phones. */
+@media (max-height: 700px) and (orientation: portrait) {
+  .home-services {
+    margin-top: calc(12 * var(--home-unit));
+  }
+
+  .home-services h2 {
+    margin-bottom: calc(8 * var(--home-unit));
+  }
+
+  .home-carousel {
+    margin-top: calc(8 * var(--home-unit));
+    padding-bottom: 2px;
+  }
 }
 
 .bottom-nav-tab:focus-visible,
