@@ -3,7 +3,7 @@
 import { getPurchaseAttempt, clearPurchaseAttempts, rememberPaymentOrder, pendingPaymentOrder, clearPendingPaymentOrder } from '@/lib/payment-attempt';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { createPortal } from 'react-dom';
+import { createPortal, flushSync } from 'react-dom';
 import { useAppStore, type AppView } from '@/lib/store';
 import QRCode from 'qrcode';
 import {
@@ -1517,9 +1517,50 @@ function HomeView() {
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
+  const openDocuments = () => {
+    const navigate = () => {
+      flushSync(() => setView('documentos'));
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    };
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const transitionDocument = document as Document & {
+      startViewTransition?: (update: () => void) => {
+        ready?: Promise<void>;
+        finished: Promise<void>;
+      };
+    };
+
+    if (reducedMotion || !transitionDocument.startViewTransition) {
+      navigate();
+      if (!reducedMotion) {
+        const tokens = getComputedStyle(document.documentElement);
+        document.querySelector('.documents-view')?.animate(
+          [{ transform: 'translateX(100%)' }, { transform: 'translateX(0)' }],
+          {
+            duration: parseFloat(tokens.getPropertyValue('--screen-slide-duration')),
+            easing: tokens.getPropertyValue('--screen-slide-easing').trim(),
+          },
+        );
+      }
+      return;
+    }
+
+    const root = document.documentElement;
+    root.dataset.documentTransition = 'forward';
+    const clearTransition = () => { delete root.dataset.documentTransition; };
+    try {
+      const transition = transitionDocument.startViewTransition(navigate);
+      void transition.ready?.catch(() => {});
+      void transition.finished.then(clearTransition, clearTransition);
+    } catch {
+      clearTransition();
+      navigate();
+    }
+  };
+
   const services = [
-    { icon: '/icons/serv-tramites.webp', label: 'Documentos', action: () => setView('documentos'), w: 49, h: 49, scale: 1.8 },
-    { icon: '/icons/serv-vehiculos.webp', label: 'Vehículos', action: () => setView('vehiculos'), w: 79, h: 81, scale: 1.8 },
+    { icon: '/icons/serv-tramites.webp', label: 'Documentos', action: openDocuments, w: 49, h: 49, scale: 1.8 },
+    { icon: '/icons/serv-vehiculos.webp', label: 'Vehículos', action: () => setView('vehiculos'), w: 62, h: 64, scale: 1.8 },
     { icon: '/icons/serv-trabajo.webp', label: 'Trabajo', action: () => setView('trabajo'), w: 42, h: 44, scale: 1.8 },
     { icon: '/icons/serv-salud.webp', label: 'Salud', action: () => setView('salud'), w: 52, h: 52, scale: 1 },
     { icon: '/icons/serv-cobros.webp', label: 'Cobros', action: () => setView('cobros'), w: 48, h: 48, scale: 1.8 },
