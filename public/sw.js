@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mi-argentina-v7';
+const CACHE_NAME = 'mi-argentina-v8';
 
 // Files to pre-cache for offline support
 const PRE_CACHE_URLS = [
