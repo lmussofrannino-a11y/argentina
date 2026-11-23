@@ -204,7 +204,7 @@ body:has(.app-viewport--home) {
 }
 
 .app-bottom-nav--home {
-  --bottom-nav-inset: calc(24px + env(safe-area-inset-bottom, 0px));
+  --bottom-nav-inset: env(safe-area-inset-bottom, 0px);
   height: calc(48px + var(--bottom-nav-inset));
   padding-bottom: var(--bottom-nav-inset);
   background: #fff;

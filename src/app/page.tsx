@@ -1425,7 +1425,7 @@ function BottomNavBar({ activeTab, homeCanvas = false }: { activeTab: BottomTab;
   const navigation = (
     <div className={`app-bottom-nav${homeCanvas ? ' app-bottom-nav--home' : ''}`} style={{
       position: 'fixed',
-      bottom: homeCanvas ? 'calc(env(safe-area-inset-bottom, 0px) * -1)' : 0,
+      bottom: 0,
       left: '50%',
       transform: 'translateX(-50%)',
       width: '100%',
