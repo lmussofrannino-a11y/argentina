@@ -153,13 +153,21 @@ html {
   padding-right: env(safe-area-inset-right, 0px);
 }
 
-/* Home is an app canvas, not a document scroller (including iOS edge bounce). */
+/* Keep the installed iOS app's document the same size as its viewport. */
+html:has(.app-viewport--home),
+body:has(.app-viewport--home) {
+  height: 100%;
+  overflow: clip;
+  background-color: #fff;
+}
+
+/* Insets own the height: do not combine them with dvh in standalone WebKit. */
 .app-viewport--home {
   position: fixed;
   inset: 0;
-  height: 100dvh;
+  height: auto;
   min-height: 0;
-  overflow: hidden;
+  overflow: clip;
   overscroll-behavior: none;
   touch-action: pan-x;
 }
@@ -173,7 +181,7 @@ html {
   height: 100%;
   min-height: 0;
   padding-bottom: calc(48px + clamp(16px, var(--app-safe-bottom), 24px));
-  overflow: hidden;
+  overflow: clip;
 }
 
 .app-screen {

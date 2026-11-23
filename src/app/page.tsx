@@ -3,6 +3,7 @@
 import { getPurchaseAttempt, clearPurchaseAttempts, rememberPaymentOrder, pendingPaymentOrder, clearPendingPaymentOrder } from '@/lib/payment-attempt';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useAppStore, type AppView } from '@/lib/store';
 import QRCode from 'qrcode';
 import {
@@ -1418,7 +1419,10 @@ function BottomNavBar({ activeTab }: { activeTab: BottomTab }) {
     { key: 'tina', label: 'Tina', icon: '/icons/logo-USUARIO.webp', activeIcon: '/icons/logo-USUARIO.webp', iconStyle: { height: '30px', width: '24px' }, action: () => setView('tina') },
   ];
 
-  return (
+  // Anchor outside the shell's containment and safe-area padding.
+  if (typeof document === 'undefined') return null;
+
+  const navigation = (
     <div className="app-bottom-nav" style={{
       position: 'fixed',
       bottom: 0,
@@ -1462,6 +1466,8 @@ function BottomNavBar({ activeTab }: { activeTab: BottomTab }) {
       </div>
     </div>
   );
+
+  return createPortal(navigation, document.body);
 }
 
 // ========================================
