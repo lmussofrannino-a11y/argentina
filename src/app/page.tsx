@@ -1409,7 +1409,7 @@ function HeaderBar({ onLogoTap, onMenuClick }: { onLogoTap?: () => void; onMenuC
 
 type BottomTab = 'home' | 'novedades' | 'telefonos' | 'tina';
 
-function BottomNavBar({ activeTab, homeCanvas = false }: { activeTab: BottomTab; homeCanvas?: boolean }) {
+function BottomNavBar({ activeTab }: { activeTab: BottomTab }) {
   const { setView, user } = useAppStore();
   const documentInactive = Boolean(user && !user.isActive);
   const tabs: { key: BottomTab; label: string; icon: string; iconStyle: React.CSSProperties; action: () => void; activeIcon?: string }[] = [
@@ -1423,7 +1423,7 @@ function BottomNavBar({ activeTab, homeCanvas = false }: { activeTab: BottomTab;
   if (typeof document === 'undefined') return null;
 
   const navigation = (
-    <div className={`app-bottom-nav${homeCanvas ? ' app-bottom-nav--home' : ''}`} style={{
+    <div className="app-bottom-nav" style={{
       position: 'fixed',
       bottom: 0,
       left: '50%',
@@ -1598,7 +1598,7 @@ function HomeView() {
         </div>
       </div>
 
-      <BottomNavBar activeTab="home" homeCanvas />
+      <BottomNavBar activeTab="home" />
 
       {/* Admin Password Modal */}
       {showAdminPrompt && (
