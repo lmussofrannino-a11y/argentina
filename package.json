@@ -8,6 +8,7 @@
     "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
     "lint": "eslint .",
     "test:payments": "node --test scripts/payment-regressions.cjs",
+    "test:admin": "node --test scripts/admin-insights-regressions.cjs",
     "security:grant-admin": "node --env-file=.env --env-file=.env.local scripts/grant-admin.mjs",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",

@@ -1,0 +1,29 @@
+.admin-insights { display: grid; gap: 20px; margin-bottom: 20px; color: #292929; font-family: var(--font-inter), system-ui, sans-serif; font-size: 14px; }
+.admin-insights h2 { margin: 0 0 12px; font-size: 17px; font-weight: 700; }
+.admin-insights h3 { margin: 18px 0 8px; font-size: 14px; font-weight: 700; }
+.admin-insights-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.admin-insights-metric, .admin-insights-panel { background: #fff; border-radius: 10px; padding: 14px; }
+.admin-insights-metric { display: flex; flex-direction: column; gap: 6px; }
+.admin-insights-metric span, .admin-insights-meta, .admin-insights-id, .admin-insights-detail-grid dt { color: #545454; font-size: 12px; }
+.admin-insights-metric strong { color: #362fc1; font-size: 24px; }
+.admin-insights-heading, .admin-insights-order-top, .admin-insights-pagination { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.admin-insights-heading h2 { margin-bottom: 0; }
+.admin-insights #admin-user-detail { scroll-margin-top: 105px; }
+.admin-insights-heading { margin-bottom: 12px; }
+.admin-insights-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 12px 0 0; }
+.admin-insights-detail-grid dd { margin: 4px 0 0; overflow-wrap: anywhere; }
+.admin-insights-orders-list { margin: 8px 0 0; padding: 0; list-style: none; }
+.admin-insights-orders-list li { padding: 12px 0; border-top: 1px solid #e5e5e5; overflow-wrap: anywhere; }
+.admin-insights-order-top strong { font-size: 15px; }
+.admin-insights-status { color: #362fc1; font-size: 12px; text-align: right; }
+.admin-insights-id { overflow-wrap: anywhere; }
+.admin-insights-user-link { border: 0; background: none; color: #362fc1; text-decoration: underline; padding: 4px 0; text-align: left; }
+.admin-insights-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.admin-insights-filters label:first-child { grid-column: 1 / -1; }
+.admin-insights-filters label { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 12px; font-weight: 600; }
+.admin-insights-filters input, .admin-insights-filters select { min-width: 0; width: 100%; height: 44px; border: 1px solid #aaa; border-radius: 8px; padding: 6px; background: #fff; font: inherit; }
+.admin-insights button { cursor: pointer; }
+.admin-insights-heading button, .admin-insights-pagination button { border: 1px solid #362fc1; border-radius: 8px; background: #fff; color: #362fc1; padding: 8px 12px; min-height: 44px; }
+.admin-insights button:disabled { opacity: .5; cursor: not-allowed; }
+.admin-insights button:focus-visible, .admin-insights input:focus-visible, .admin-insights select:focus-visible { outline: 3px solid #362fc1; outline-offset: 2px; }
+.admin-insights-error { color: #a11919; }

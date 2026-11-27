@@ -6,6 +6,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import { useAppStore, type AppView } from '@/lib/store';
 import QRCode from 'qrcode';
+import AdminInsights from '@/components/admin-insights';
 import {
   ArrowLeft,
   Home,
@@ -2233,6 +2234,12 @@ function AdminView() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [selectedAdminUserId, setSelectedAdminUserId] = useState<string | null>(null);
+  const [adminRefreshKey, setAdminRefreshKey] = useState(0);
+  const openAdminUser = (id: string | null) => {
+    setSelectedAdminUserId(id);
+    if (id) window.setTimeout(() => document.getElementById('admin-user-detail')?.scrollIntoView({ block: 'start' }), 0);
+  };
 
   const filterUsers = (list: { id: string; email: string; isActive: boolean; tokens: number; tokenDebt: number; createdAt: string; dni: { nombre: string; apellido: string; dniNumero: string } | null }[] | null | undefined) => {
     if (!list) return [];
@@ -2254,6 +2261,8 @@ function AdminView() {
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Error al cargar usuarios'); return; }
       setUsers(data.users);
+      setError(null);
+      setAdminRefreshKey(key => key + 1);
     } catch {
       setError('Error de conexión');
     } finally {
@@ -2375,6 +2384,8 @@ function AdminView() {
           </div>
         )}
 
+        <AdminInsights selectedUserId={selectedAdminUserId} onSelectUser={openAdminUser} refreshKey={adminRefreshKey} />
+
         {!loading && (
           <div style={{ position: 'relative', marginBottom: '16px' }}>
             <Search size={16} color="#9e9e9e" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
@@ -2423,6 +2434,7 @@ function AdminView() {
                           <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#9e9e9e', fontFamily: SYS_FONT }}>
                              DNI: {u.dni?.dniNumero || '-'} · Tokens: {u.tokens}{u.tokenDebt > 0 ? ` · Ajuste: ${u.tokenDebt}` : ''} · Registrado: {new Date(u.createdAt).toLocaleDateString('es')}
                           </p>
+                          <button type="button" onClick={() => openAdminUser(u.id)} style={{ background: 'none', border: 'none', color: '#362FC1', fontWeight: 600, padding: '8px 0', cursor: 'pointer', fontFamily: SYS_FONT }}>Ver ficha</button>
                           <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
                             <input
                               type="number"
@@ -2488,6 +2500,7 @@ function AdminView() {
                           <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#9e9e9e', fontFamily: SYS_FONT }}>
                             DNI: {u.dni?.dniNumero || '-'} · Tokens restantes: {u.tokens}
                           </p>
+                          <button type="button" onClick={() => openAdminUser(u.id)} style={{ background: 'none', border: 'none', color: '#362FC1', fontWeight: 600, padding: '8px 0', cursor: 'pointer', fontFamily: SYS_FONT }}>Ver ficha</button>
                           <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
                             <input
                               type="number"
